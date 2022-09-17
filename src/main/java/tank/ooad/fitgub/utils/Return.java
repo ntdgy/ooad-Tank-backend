@@ -16,6 +16,8 @@ public class Return {
         this.data = null;
     }
 
-
+    public String toString() {
+        return String.format("%s: %s", status, data);
+    }
 
 }
