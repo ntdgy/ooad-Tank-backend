@@ -1,4 +1,4 @@
-package tank.ooad.fitgub.entity;
+package tank.ooad.fitgub.entity.user;
 
 public class UserInfo {
     public int user_id;

@@ -20,4 +20,8 @@ public class Return {
         return String.format("%s: %s", status, data);
     }
 
+    public static final Return OK = new Return(ReturnCode.OK);
+    public static final Return LOGIN_REQUIRED = new Return(ReturnCode.LOGIN_REQUIRED);
+
+
 }

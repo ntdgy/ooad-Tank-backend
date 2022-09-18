@@ -1,4 +1,4 @@
-package tank.ooad.fitgub.entity;
+package tank.ooad.fitgub.entity.user;
 
 
 public class User {
