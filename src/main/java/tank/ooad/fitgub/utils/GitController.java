@@ -2,7 +2,7 @@ package tank.ooad.fitgub.utils;
 
 import org.eclipse.jgit.api.*;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import tank.ooad.fitgub.entity.User;
+import tank.ooad.fitgub.entity.user.User;
 
 import java.io.File;
 

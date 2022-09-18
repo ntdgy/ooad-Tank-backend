@@ -41,6 +41,14 @@ public enum AttributeKeys {
         return obj;
     }
 
+    public Object getValueNonNull(HttpSession session) {
+        Object obj = session.getAttribute(key);
+        if (obj == null) {
+            throw new RuntimeException("key " + key + " is null.");
+        }
+        return obj;
+    }
+
     public void setValue(HttpSession session, Object value) {
         assert value.getClass().equals(type);
         session.setAttribute(this.key, value);

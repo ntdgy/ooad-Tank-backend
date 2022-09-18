@@ -14,7 +14,9 @@ public enum ReturnCode {
     USER_AUTH_FAILED(-1003, "auth failed"),
 
     GitAPIError(-2000, "Git API Error."),
-    GitRepoExist(-2001, "Git Repo Exist.");
+    GitRepoExist(-2001, "Git Repo Exist."),
+
+    REPO_DUPLICATED(-3000, "repo is already existed.");
     public final int code;
     public final String message;
 
