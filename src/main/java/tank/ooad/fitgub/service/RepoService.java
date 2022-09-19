@@ -39,6 +39,7 @@ public class RepoService {
 
     /**
      * Insert Repo in database, return generated repoId.
+     *
      * @param repo
      * @param userId
      * @return repo id
@@ -46,18 +47,18 @@ public class RepoService {
     public int createRepo(Repo repo, int userId) {
         Integer repoId = template.queryForObject("insert into repo(name, visible) values (?,?) returning id;", Integer.class, repo.name, repo.visible);
         assert repoId != null;
-        template.update("insert into user_repo(user_id, repo_id, permission) values (?, ?, 0);", userId, repoId);
+        template.update("insert into user_repo(user_id, repo_id, permission) values (?, ?, ?);", userId, repoId, RepoUsers.REPO_USER_PERMISSION_CREATOR);
         return repoId;
     }
 
     public List<RepoUsers> getUserRepos(int userId) {
         return template.query("""
-                select repo_id, repo.name as repo_name, repo.visible as repo_visible, user_id, u.name as user_name, u.email as user_email, permission
-                from repo
-                         join user_repo ur on repo.id = ur.repo_id
-                         join users u on ur.user_id = u.id
-                where ur.user_id = ?
-                """,
+                        select repo_id, repo.name as repo_name, repo.visible as repo_visible, user_id, u.name as user_name, u.email as user_email, permission
+                        from repo
+                                 join user_repo ur on repo.id = ur.repo_id
+                                 join users u on ur.user_id = u.id
+                        where ur.user_id = ?
+                        """,
                 (rs, rowNum) -> {
                     Repo repo = new Repo(rs.getInt("repo_id"), rs.getString("repo_name"), rs.getInt("repo_visible"));
                     User user = new User(rs.getInt("user_id"), rs.getString("user_name"), rs.getString("user_email"));
@@ -68,9 +69,37 @@ public class RepoService {
 
     /**
      * Remove repoId from repo and user_repo table
+     *
      * @param repoId
      */
     public void dropRepo(int repoId) {
         template.update("delete from repo where id = ?;", repoId);
+    }
+
+    /**
+     * Check RepoPermission
+     *
+     * @return
+     */
+    public boolean checkRepoReadPermission(int currentUserId, GitOperation.RepoStore repoStore, int requiredPermission) {
+        return true;
+    }
+
+    public GitOperation.RepoStore resolveRepo(String username, String repoName) {
+        try {
+            return template.query("""
+                            select repo_id, user_id
+                            from user_repo
+                                     join users u on u.id = user_repo.user_id and u.name=? and permission = 7
+                                     join repo r on r.id = user_repo.repo_id and r.name=?
+                            """,
+                    rs -> {
+                        rs.next();
+                        return new GitOperation.RepoStore(rs.getInt("user_id"), rs.getInt("repo_id"));
+                    },
+                    username, repoName);
+        } catch (Exception ex) {
+            return null;
+        }
     }
 }

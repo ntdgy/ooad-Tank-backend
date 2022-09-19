@@ -27,17 +27,19 @@ public class RepoUsers {
     }
 
     /**
-     * Owner own the repo. It can read/write repo, change repo settings, and delete repo.
+     * Owner Permission
      */
-    public static final int REPO_USER_PERMISSION_OWNER = 0;
+    public static final int REPO_USER_PERMISSION_OWNER = 4;
 
     /**
-     * Contributor can read/write repo, but cannot change settings.
+     * Write Permission
      */
-    public static final int REPO_USER_PERMISSION_CONTRIBUTOR = 0;
+    public static final int REPO_USER_PERMISSION_WRITE = 2;
 
     /**
-     * ReadOnly can only read repo, cannot write repo.
+     * Read Permission
      */
-    public static final int REPO_USER_PERMISSION_READONLY = 0;
+    public static final int REPO_USER_PERMISSION_READ = 1;
+
+    public static final int REPO_USER_PERMISSION_CREATOR = REPO_USER_PERMISSION_OWNER | REPO_USER_PERMISSION_WRITE | REPO_USER_PERMISSION_READ;
 }

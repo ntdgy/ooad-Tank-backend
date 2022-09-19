@@ -15,6 +15,8 @@ public enum ReturnCode {
 
     GitAPIError(-2000, "Git API Error."),
     GitRepoExist(-2001, "Git Repo Exist."),
+    GIT_REPO_NON_EXIST(-2002, "Git repo doesn't exists."),
+    GIT_REPO_NO_PERMISSION(-2003, "no permission"),
 
     REPO_DUPLICATED(-3000, "repo is already existed.");
     public final int code;
