@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import tank.ooad.fitgub.entity.repo.Repo;
 import tank.ooad.fitgub.entity.repo.RepoUsers;
 import tank.ooad.fitgub.entity.user.User;
+import tank.ooad.fitgub.git.GitOperation;
 
 import java.awt.event.ItemListener;
 import java.sql.ResultSet;
@@ -23,7 +24,6 @@ public class RepoService {
         this.template = template;
     }
 
-
     /**
      * Check whether Repo.name is duplicated under namespace userId.
      *
@@ -37,10 +37,17 @@ public class RepoService {
         return cnt != 0;
     }
 
-    public void createRepo(Repo repo, int userId) {
+    /**
+     * Insert Repo in database, return generated repoId.
+     * @param repo
+     * @param userId
+     * @return repo id
+     */
+    public int createRepo(Repo repo, int userId) {
         Integer repoId = template.queryForObject("insert into repo(name, visible) values (?,?) returning id;", Integer.class, repo.name, repo.visible);
         assert repoId != null;
         template.update("insert into user_repo(user_id, repo_id, permission) values (?, ?, 0);", userId, repoId);
+        return repoId;
     }
 
     public List<RepoUsers> getUserRepos(int userId) {
@@ -57,5 +64,13 @@ public class RepoService {
                     return new RepoUsers(repo, user, rs.getInt("permission"));
                 },
                 userId);
+    }
+
+    /**
+     * Remove repoId from repo and user_repo table
+     * @param repoId
+     */
+    public void dropRepo(int repoId) {
+        template.update("delete from repo where id = ?;", repoId);
     }
 }
