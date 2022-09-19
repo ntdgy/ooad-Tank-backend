@@ -7,6 +7,9 @@ import tank.ooad.fitgub.utils.permission.RequireLoginInterceptor;
 
 @Configuration
 public class MyConfig extends WebMvcConfigurerAdapter {
+
+    public static final String HOST = "127.0.0.1";
+    public static final String GIT_HTTP_SERVER_BASE = "http://127.0.0.1:8081/git";
     @Override
     public void addInterceptors(InterceptorRegistry registry){
         registry.addInterceptor(new RequireLoginInterceptor());

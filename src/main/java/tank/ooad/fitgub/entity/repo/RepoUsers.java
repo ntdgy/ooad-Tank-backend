@@ -1,6 +1,7 @@
 package tank.ooad.fitgub.entity.repo;
 
 import tank.ooad.fitgub.entity.user.User;
+import tank.ooad.fitgub.utils.MyConfig;
 
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
@@ -13,6 +14,8 @@ public class RepoUsers {
     @Max(value = 1)
     public int permission;
 
+    public String gitUrl;
+
     public RepoUsers() {
     }
 
@@ -20,6 +23,7 @@ public class RepoUsers {
         this.repo = repo;
         this.user = user;
         this.permission = permission;
+        this.gitUrl = String.format("%s/%s/%s.git", MyConfig.GIT_HTTP_SERVER_BASE, user.name, repo.name);
     }
 
     /**
