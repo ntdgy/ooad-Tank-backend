@@ -2,6 +2,9 @@ package tank.ooad.fitgub.entity.user;
 
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.springframework.jdbc.core.RowMapper;
+import tank.ooad.fitgub.entity.repo.Repo;
+import tank.ooad.fitgub.entity.repo.RepoUsers;
 
 public class User {
 
@@ -20,4 +23,7 @@ public class User {
         this.name = name;
         this.email = email;
     }
+
+    public static final RowMapper<User> mapper = (rs, rowNum)
+            -> new User(rs.getInt("id"), rs.getString("name"), rs.getString("email"));
 }

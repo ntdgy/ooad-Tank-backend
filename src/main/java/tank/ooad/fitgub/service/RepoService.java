@@ -1,18 +1,11 @@
 package tank.ooad.fitgub.service;
 
-import lombok.extern.apachecommons.CommonsLog;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 import tank.ooad.fitgub.entity.repo.Repo;
 import tank.ooad.fitgub.entity.repo.RepoUsers;
-import tank.ooad.fitgub.entity.user.User;
 import tank.ooad.fitgub.git.GitOperation;
 
-import java.awt.event.ItemListener;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.List;
 
 @Component
@@ -79,8 +72,22 @@ public class RepoService {
      *
      * @return
      */
-    public boolean checkRepoReadPermission(int currentUserId, GitOperation.RepoStore repoStore, int requiredPermission) {
-        return true;
+    public boolean checkUserRepoPermission(int currentUserId, int repoId, int requiredPermission) {
+        Integer cnt = template.queryForObject("""
+                            select count(*) from user_repo join users u on u.id = user_repo.user_id join repo r on r.id = user_repo.repo_id
+                                where repo_id = ? and u.id = ? and permission & ? = ?
+                        """, Integer.class,
+                repoId, currentUserId, requiredPermission, requiredPermission);
+        return cnt != null && cnt > 0;
+    }
+
+    public boolean checkUserRepoOwner(int currentUserId, String reponame) {
+        Integer cnt = template.queryForObject("""
+                            select count(*) from user_repo join repo r on r.id = user_repo.repo_id
+                                where r.name = ? and user_id = ? and permission = 7;
+                        """, Integer.class,
+                reponame, currentUserId);
+        return cnt != null && cnt > 0;
     }
 
     public GitOperation.RepoStore resolveRepo(String username, String repoName) {
@@ -106,5 +113,17 @@ public class RepoService {
                                                          """,
                 RepoUsers.mapper,
                 username);
+    }
+
+    public List<RepoUsers> getRepoPrivilegedUsers(int ownerUserId, String reponame) {
+        return template.query("""
+                        select repo_id, repo.name as repo_name, repo.visible as repo_visible, user_id, u.name as user_name, u.email as user_email, permission
+                                                from repo
+                                                         join user_repo ur on repo.id = ur.repo_id and ur.user_id = ?
+                                                         join users u on ur.user_id = u.id
+                                                         where repo.name = ?;
+                                                         """,
+                RepoUsers.mapper,
+                ownerUserId, reponame);
     }
 }

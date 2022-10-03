@@ -42,8 +42,7 @@ public class UserService {
 
     public User getUser(int userId) {
         return jdbcTemplate.queryForObject("""
-                        select id, name, email from users where id = ?;
-                        """, User.class,
-                userId);
+                select id, name, email from users where id = ?;
+                """, User.mapper, userId);
     }
 }

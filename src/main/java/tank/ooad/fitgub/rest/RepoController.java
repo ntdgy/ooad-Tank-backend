@@ -61,4 +61,15 @@ public class RepoController {
         var lst = repoService.getUserPublicRepo(username);
         return new Return<>(ReturnCode.OK, lst);
     }
+
+    // Repo Permissions
+    @RequireLogin
+    @GetMapping("/api/repo/{reponame}/setting/permission")
+    public Return<List<RepoUsers>> listRepoPermission(@PathVariable String reponame, HttpSession session) {
+        int userId = (int) AttributeKeys.USER_ID.getValue(session);
+        if (!repoService.checkUserRepoOwner(userId, reponame)) {
+            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+        }
+        return new Return<>(ReturnCode.OK, repoService.getRepoPrivilegedUsers(userId, reponame));
+    }
 }
