@@ -1,12 +1,12 @@
 package tank.ooad.fitgub.utils;
 
 
-public class Return {
+public class Return<T> {
 
     public final ReturnCode status;
-    public final Object data;
+    public final T data;
 
-    public Return(ReturnCode status, Object data) {
+    public Return(ReturnCode status, T data) {
         this.status = status;
         this.data = data;
     }
@@ -20,8 +20,8 @@ public class Return {
         return String.format("%s: %s", status, data);
     }
 
-    public static final Return OK = new Return(ReturnCode.OK);
-    public static final Return LOGIN_REQUIRED = new Return(ReturnCode.LOGIN_REQUIRED);
+    public static final Return<Void> OK = new Return<>(ReturnCode.OK);
+    public static final Return<Void> LOGIN_REQUIRED = new Return<>(ReturnCode.LOGIN_REQUIRED);
 
 
 }

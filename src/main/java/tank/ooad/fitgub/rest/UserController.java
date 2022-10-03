@@ -22,27 +22,27 @@ public class UserController {
     private JdbcTemplate jdbcTemplate;
 
     @PostMapping("/api/user/login")
-    public Return login(@RequestBody User login, HttpSession session) {
-        if ((int) AttributeKeys.USER_ID.getValue(session) != 0) return new Return(ReturnCode.USER_ALREADY_LOGIN);
+    public Return<Void> login(@RequestBody User login, HttpSession session) {
+        if ((int) AttributeKeys.USER_ID.getValue(session) != 0) return new Return<>(ReturnCode.USER_ALREADY_LOGIN);
 
         log.info(Crypto.hashPassword(login.password));
 
         int valid = validateUser(login.name, login.email, login.password);
-        if (valid == 0) return new Return(ReturnCode.USER_AUTH_FAILED);
+        if (valid == 0) return new Return<>(ReturnCode.USER_AUTH_FAILED);
         AttributeKeys.USER_ID.setValue(session, valid);
         return Return.OK;
     }
 
     @RequireLogin
     @PostMapping("/api/user/logout")
-    public Return logout(HttpSession session) {
+    public Return<Void> logout(HttpSession session) {
         AttributeKeys.USER_ID.setValue(session, AttributeKeys.USER_ID.getDefaultValue());
         return Return.OK;
     }
 
     @PostMapping("/api/user/register")
-    public Return createUser(@RequestBody User register) {
-        if (checkExist(register.name, register.email)) return new Return(ReturnCode.USER_REGISTERED);
+    public Return<Void> createUser(@RequestBody User register) {
+        if (checkExist(register.name, register.email)) return new Return<>(ReturnCode.USER_REGISTERED);
         Integer id = jdbcTemplate.queryForObject("insert into users(name, password, email) values (?,?,?) returning id;",
                 Integer.class, register.name, Crypto.hashPassword(register.password), register.email);
         jdbcTemplate.update("insert into user_info(user_id, display_name, bio) values (?,?,'');", id, register.name);
@@ -50,7 +50,7 @@ public class UserController {
     }
 
     @GetMapping("/api/user/check-login")
-    public Return check(HttpSession session) {
+    public Return<Void> check(HttpSession session) {
         if ((int) AttributeKeys.USER_ID.getValue(session) != 0) return Return.OK;
         return Return.LOGIN_REQUIRED;
     }
@@ -63,9 +63,6 @@ public class UserController {
     /**
      * Validate a user with given (username or email) and raw password, and get its userId if valid
      *
-     * @param username
-     * @param email
-     * @param rawPassword
      * @return 0 if invalid, otherwise a valid user id
      */
     private int validateUser(String username, String email, String rawPassword) {

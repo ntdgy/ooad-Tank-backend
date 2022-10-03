@@ -47,18 +47,18 @@ public class GitController {
      * @return GitCommitTree
      */
     @GetMapping("/api/git/{username}/{reponame}/commit_tree")
-    public Return getCommitAndTree(@PathVariable String username, @PathVariable String reponame,
+    public Return<GitCommitTree> getCommitAndTree(@PathVariable String username, @PathVariable String reponame,
                               @RequestParam Optional<String> resolve,
                               HttpSession session) {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
 
         // Resolve Repo
         GitOperation.RepoStore repoStore = repoService.resolveRepo(username, reponame);
-        if (repoStore == null) return new Return(ReturnCode.GIT_REPO_NON_EXIST);
+        if (repoStore == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
 
         // checkPermission: require Read
         if (!repoService.checkRepoReadPermission(currentUserId, repoStore, RepoUsers.REPO_USER_PERMISSION_READ)) {
-            return new Return(ReturnCode.GIT_REPO_NO_PERMISSION);
+            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
 
         try (Repository repository = gitOperation.getRepository(repoStore)) {
@@ -97,7 +97,7 @@ public class GitController {
             }
             treeWalk.close();
             commitTree.tree = gitTree;
-            return new Return(ReturnCode.OK, commitTree);
+            return new Return<>(ReturnCode.OK, commitTree);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

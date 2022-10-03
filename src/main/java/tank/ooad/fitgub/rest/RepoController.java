@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import tank.ooad.fitgub.entity.repo.Repo;
+import tank.ooad.fitgub.entity.repo.RepoUsers;
 import tank.ooad.fitgub.git.GitOperation;
 import tank.ooad.fitgub.service.RepoService;
 import tank.ooad.fitgub.utils.AttributeKeys;
@@ -13,6 +14,7 @@ import tank.ooad.fitgub.utils.ReturnCode;
 import tank.ooad.fitgub.utils.permission.RequireLogin;
 
 import javax.servlet.http.HttpSession;
+import java.util.List;
 
 @RestController
 public class RepoController {
@@ -27,10 +29,10 @@ public class RepoController {
 
     @RequireLogin
     @PostMapping("/api/repo/create")
-    public Return createRepo(@RequestBody Repo repo, HttpSession session) {
+    public Return<Void> createRepo(@RequestBody Repo repo, HttpSession session) {
         int userId = (int) AttributeKeys.USER_ID.getValueNonNull(session);
 
-        if (repoService.checkRepoDuplicate(repo, userId)) return new Return(ReturnCode.REPO_DUPLICATED);
+        if (repoService.checkRepoDuplicate(repo, userId)) return new Return<>(ReturnCode.REPO_DUPLICATED);
         int repoId = repoService.createRepo(repo, userId);
         try {
             gitOperation.createGitRepo(new GitOperation.RepoStore(userId, repoId));
@@ -43,10 +45,15 @@ public class RepoController {
 
     @RequireLogin
     @GetMapping("/api/repo/list_self")
-    public Return listMyRepo(HttpSession session) {
+    public Return<List<RepoUsers>> listMyRepo(HttpSession session) {
         int userId = (int) AttributeKeys.USER_ID.getValueNonNull(session);
 
         var lst = repoService.getUserRepos(userId);
-        return new Return(ReturnCode.OK, lst);
+        return new Return<>(ReturnCode.OK, lst);
+    }
+
+    @GetMapping("/api/repo/list_pub/{username}")
+    public Return<List<RepoUsers>> listUserPublicRepo(String username, HttpSession session) {
+        return new Return<>(ReturnCode.NOT_IMPLEMENTED);
     }
 }
