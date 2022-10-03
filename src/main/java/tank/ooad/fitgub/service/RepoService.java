@@ -102,8 +102,8 @@ public class RepoService {
                         select repo_id, repo.name as repo_name, repo.visible as repo_visible, user_id, u.name as user_name, u.email as user_email, permission
                                                 from repo
                                                          join user_repo ur on repo.id = ur.repo_id
-                                                         join users u on ur.user_id = u.id where u.name = ? and repo.visible = 0;
-                        """,
+                                                         join users u on ur.user_id = u.id where u.name = ? and repo.visible = 0 and permission = 7;
+                                                         """,
                 RepoUsers.mapper,
                 username);
     }

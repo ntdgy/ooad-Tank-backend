@@ -57,7 +57,7 @@ public class RepoController {
     }
 
     @GetMapping("/api/repo/list_pub/{username}")
-    public Return<List<RepoUsers>> listUserPublicRepo(String username) {
+    public Return<List<RepoUsers>> listUserPublicRepo(@PathVariable String username) {
         var lst = repoService.getUserPublicRepo(username);
         return new Return<>(ReturnCode.OK, lst);
     }
