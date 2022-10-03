@@ -42,7 +42,7 @@ public class RepoController {
     }
 
     @RequireLogin
-    @GetMapping("/api/repo/list")
+    @GetMapping("/api/repo/list_self")
     public Return listMyRepo(HttpSession session) {
         int userId = (int) AttributeKeys.USER_ID.getValueNonNull(session);
 
