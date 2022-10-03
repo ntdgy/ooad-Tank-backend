@@ -21,7 +21,7 @@ public class Return<T> {
     }
 
     public static final Return<Void> OK = new Return<>(ReturnCode.OK);
-    public static final Return<Void> LOGIN_REQUIRED = new Return<>(ReturnCode.LOGIN_REQUIRED);
+    public static final Return LOGIN_REQUIRED = new Return<>(ReturnCode.LOGIN_REQUIRED);
 
 
 }

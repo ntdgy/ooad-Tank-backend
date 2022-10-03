@@ -1,5 +1,6 @@
 package tank.ooad.fitgub.entity.repo;
 
+import org.springframework.jdbc.core.RowMapper;
 import tank.ooad.fitgub.entity.user.User;
 import tank.ooad.fitgub.utils.MyConfig;
 
@@ -25,6 +26,12 @@ public class RepoUsers {
         this.permission = permission;
         this.gitUrl = String.format("%s/%s/%s.git", MyConfig.GIT_HTTP_SERVER_BASE, user.name, repo.name);
     }
+
+    public static final RowMapper<RepoUsers> mapper = (rs, rowNum) -> {
+        Repo repo = new Repo(rs.getInt("repo_id"), rs.getString("repo_name"), rs.getInt("repo_visible"));
+        User user = new User(rs.getInt("user_id"), rs.getString("user_name"), rs.getString("user_email"));
+        return new RepoUsers(repo, user, rs.getInt("permission"));
+    };
 
     /**
      * Owner Permission

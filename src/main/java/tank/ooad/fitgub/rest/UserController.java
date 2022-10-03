@@ -6,6 +6,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 import tank.ooad.fitgub.entity.user.User;
+import tank.ooad.fitgub.service.UserService;
 import tank.ooad.fitgub.utils.AttributeKeys;
 import tank.ooad.fitgub.utils.Crypto;
 import tank.ooad.fitgub.utils.Return;
@@ -21,13 +22,16 @@ public class UserController {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private UserService userService;
+
     @PostMapping("/api/user/login")
     public Return<Void> login(@RequestBody User login, HttpSession session) {
         if ((int) AttributeKeys.USER_ID.getValue(session) != 0) return new Return<>(ReturnCode.USER_ALREADY_LOGIN);
 
         log.info(Crypto.hashPassword(login.password));
 
-        int valid = validateUser(login.name, login.email, login.password);
+        int valid = userService.validateUser(login.name, login.email, login.password);
         if (valid == 0) return new Return<>(ReturnCode.USER_AUTH_FAILED);
         AttributeKeys.USER_ID.setValue(session, valid);
         return Return.OK;
@@ -42,7 +46,7 @@ public class UserController {
 
     @PostMapping("/api/user/register")
     public Return<Void> createUser(@RequestBody User register) {
-        if (checkExist(register.name, register.email)) return new Return<>(ReturnCode.USER_REGISTERED);
+        if (userService.checkExist(register.name, register.email)) return new Return<>(ReturnCode.USER_REGISTERED);
         Integer id = jdbcTemplate.queryForObject("insert into users(name, password, email) values (?,?,?) returning id;",
                 Integer.class, register.name, Crypto.hashPassword(register.password), register.email);
         jdbcTemplate.update("insert into user_info(user_id, display_name, bio) values (?,?,'');", id, register.name);
@@ -50,34 +54,11 @@ public class UserController {
     }
 
     @GetMapping("/api/user/check-login")
-    public Return<Void> check(HttpSession session) {
-        if ((int) AttributeKeys.USER_ID.getValue(session) != 0) return Return.OK;
-        return Return.LOGIN_REQUIRED;
-    }
-
-    private boolean checkExist(String username, String email) {
-        Integer count = jdbcTemplate.queryForObject("select count(*) from users where name = ? or email=?", Integer.class, username, email);
-        return count != null && count != 0;
-    }
-
-    /**
-     * Validate a user with given (username or email) and raw password, and get its userId if valid
-     *
-     * @return 0 if invalid, otherwise a valid user id
-     */
-    private int validateUser(String username, String email, String rawPassword) {
-        try {
-            if (username != null) {
-                Integer id = jdbcTemplate.queryForObject("select id from users where name = ? and password = ?;", Integer.class, username, Crypto.hashPassword(rawPassword));
-                if (id != null) return id;
-            }
-            if (email != null) {
-                Integer id = jdbcTemplate.queryForObject("select id from users where email = ? and password = ?;", Integer.class, email, Crypto.hashPassword(rawPassword));
-                if (id != null) return id;
-            }
-            return 0;
-        } catch (DataAccessException ig) {
-            return 0;
-        }
+    public Return<User> checkLogin(HttpSession session) {
+        int userId = (int) AttributeKeys.USER_ID.getValue(session);
+        if (userId == 0)
+            return new Return<>(ReturnCode.LOGIN_REQUIRED);
+        User user = userService.getUser(userId);
+        return new Return<>(ReturnCode.OK, user);
     }
 }

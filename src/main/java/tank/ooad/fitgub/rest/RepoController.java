@@ -1,9 +1,6 @@
 package tank.ooad.fitgub.rest;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import tank.ooad.fitgub.entity.repo.Repo;
 import tank.ooad.fitgub.entity.repo.RepoUsers;
 import tank.ooad.fitgub.git.GitOperation;
@@ -15,6 +12,7 @@ import tank.ooad.fitgub.utils.permission.RequireLogin;
 
 import javax.servlet.http.HttpSession;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 public class RepoController {
@@ -43,17 +41,24 @@ public class RepoController {
         return Return.OK;
     }
 
+    /**
+     *
+     * @param session
+     * @param permission null if owr, "owner" if o--,
+     * @return
+     */
     @RequireLogin
     @GetMapping("/api/repo/list_self")
-    public Return<List<RepoUsers>> listMyRepo(HttpSession session) {
+    public Return<List<RepoUsers>> listMyRepo(HttpSession session, @RequestParam Optional<String> permission) {
         int userId = (int) AttributeKeys.USER_ID.getValueNonNull(session);
-
-        var lst = repoService.getUserRepos(userId);
+        boolean ownerOnly = permission.isPresent() && permission.get().equals("owner");
+        var lst = repoService.getUserRepos(userId, ownerOnly);
         return new Return<>(ReturnCode.OK, lst);
     }
 
     @GetMapping("/api/repo/list_pub/{username}")
-    public Return<List<RepoUsers>> listUserPublicRepo(String username, HttpSession session) {
-        return new Return<>(ReturnCode.NOT_IMPLEMENTED);
+    public Return<List<RepoUsers>> listUserPublicRepo(String username) {
+        var lst = repoService.getUserPublicRepo(username);
+        return new Return<>(ReturnCode.OK, lst);
     }
 }

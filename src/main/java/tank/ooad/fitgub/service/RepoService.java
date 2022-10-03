@@ -51,20 +51,18 @@ public class RepoService {
         return repoId;
     }
 
-    public List<RepoUsers> getUserRepos(int userId) {
+    public List<RepoUsers> getUserRepos(int userId, boolean ownerOnly) {
+        int permissionMask = 7;
+        if (ownerOnly) permissionMask = 4;
         return template.query("""
                         select repo_id, repo.name as repo_name, repo.visible as repo_visible, user_id, u.name as user_name, u.email as user_email, permission
                         from repo
                                  join user_repo ur on repo.id = ur.repo_id
                                  join users u on ur.user_id = u.id
-                        where ur.user_id = ?
+                        where ur.user_id = ? and permission & ? > 0
                         """,
-                (rs, rowNum) -> {
-                    Repo repo = new Repo(rs.getInt("repo_id"), rs.getString("repo_name"), rs.getInt("repo_visible"));
-                    User user = new User(rs.getInt("user_id"), rs.getString("user_name"), rs.getString("user_email"));
-                    return new RepoUsers(repo, user, rs.getInt("permission"));
-                },
-                userId);
+                RepoUsers.mapper,
+                userId, permissionMask);
     }
 
     /**
@@ -86,20 +84,27 @@ public class RepoService {
     }
 
     public GitOperation.RepoStore resolveRepo(String username, String repoName) {
-        try {
-            return template.query("""
-                            select repo_id, user_id
-                            from user_repo
-                                     join users u on u.id = user_repo.user_id and u.name=? and permission = 7
-                                     join repo r on r.id = user_repo.repo_id and r.name=?
-                            """,
-                    rs -> {
-                        rs.next();
-                        return new GitOperation.RepoStore(rs.getInt("user_id"), rs.getInt("repo_id"));
-                    },
-                    username, repoName);
-        } catch (Exception ex) {
-            return null;
-        }
+        return template.query("""
+                        select repo_id, user_id
+                        from user_repo
+                                 join users u on u.id = user_repo.user_id and u.name=? and permission = 7
+                                 join repo r on r.id = user_repo.repo_id and r.name=?
+                        """,
+                rs -> {
+                    rs.next();
+                    return new GitOperation.RepoStore(rs.getInt("user_id"), rs.getInt("repo_id"));
+                },
+                username, repoName);
+    }
+
+    public List<RepoUsers> getUserPublicRepo(String username) {
+        return template.query("""
+                        select repo_id, repo.name as repo_name, repo.visible as repo_visible, user_id, u.name as user_name, u.email as user_email, permission
+                                                from repo
+                                                         join user_repo ur on repo.id = ur.repo_id
+                                                         join users u on ur.user_id = u.id where u.name = ? and repo.visible = 0;
+                        """,
+                RepoUsers.mapper,
+                username);
     }
 }
