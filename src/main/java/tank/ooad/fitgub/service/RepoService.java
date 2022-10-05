@@ -93,7 +93,7 @@ public class RepoService {
      */
     public boolean checkUserRepoReadPermission(String ownerName, String repoName, int currentUserId) {
         Integer isPublic = template.queryForObject("""
-                select visible from repo join uo on uo.id = repo.owner_id where uo.name = ? and repo.name =?;
+                select visible from repo join users uo on uo.id = repo.owner_id where uo.name = ? and repo.name =?;
                 """, Integer.class, ownerName, repoName);
         if (isPublic != null && isPublic == Repo.VISIBLE_PUBLIC) {
             return true;
@@ -128,7 +128,7 @@ public class RepoService {
 
     public GitOperation.RepoStore resolveRepo(String ownerName, String repoName) {
         return template.query("""
-                        select * from repo join users uo on uo.id = repo.owner_id where repo.name = ? and uo.name = ?;
+                        select repo.owner_id as user_id, repo.id as repo_id from repo join users uo on uo.id = repo.owner_id where repo.name = ? and uo.name = ?;
                         """,
                 rs -> {
                     rs.next();
