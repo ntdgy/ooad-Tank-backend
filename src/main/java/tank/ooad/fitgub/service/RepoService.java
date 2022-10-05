@@ -99,7 +99,7 @@ public class RepoService {
             return true;
         }
         Integer cnt = template.queryForObject("""
-                            select count(*) from repo join uo on uo.id = repo.owner_id
+                            select count(*) from repo join users uo on uo.id = repo.owner_id
                                 join user_repo ur on repo.id = ur.repo_id
                              where uo.name = ? and repo.name =? and ur.user_id = ? and permission & ? > 0
                         """, Integer.class,
@@ -109,7 +109,7 @@ public class RepoService {
 
     public boolean checkUserRepoWritePermission(String ownerName, String repoName, int currentUserId, int requiredPermission) {
         Integer cnt = template.queryForObject("""
-                            select count(*) from repo join uo on uo.id = repo.owner_id
+                            select count(*) from repo join users uo on uo.id = repo.owner_id
                                 join user_repo ur on repo.id = ur.repo_id
                              where uo.name = ? and repo.name =? and ur.user_id = ? and permission & ? > 0
                         """, Integer.class,
