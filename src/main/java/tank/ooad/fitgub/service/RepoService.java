@@ -3,8 +3,9 @@ package tank.ooad.fitgub.service;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import tank.ooad.fitgub.entity.repo.Repo;
-import tank.ooad.fitgub.entity.repo.RepoUsers;
+import tank.ooad.fitgub.entity.repo.RepoCollaborator;
 import tank.ooad.fitgub.git.GitOperation;
+import tank.ooad.fitgub.rest.RepoIssueController;
 
 import java.util.List;
 
@@ -12,9 +13,11 @@ import java.util.List;
 public class RepoService {
 
     private final JdbcTemplate template;
+    private final RepoIssueController issueController;
 
-    public RepoService(JdbcTemplate template) {
+    public RepoService(JdbcTemplate template, RepoIssueController repoIssueController) {
         this.template = template;
+        this.issueController = repoIssueController;
     }
 
     /**
@@ -34,28 +37,37 @@ public class RepoService {
      * Insert Repo in database, return generated repoId.
      *
      * @param repo
-     * @param userId
+     * @param ownerUserId
      * @return repo id
      */
-    public int createRepo(Repo repo, int userId) {
-        Integer repoId = template.queryForObject("insert into repo(name, visible) values (?,?) returning id;", Integer.class, repo.name, repo.visible);
+    public int createRepo(Repo repo, int ownerUserId) {
+        Integer repoId = template.queryForObject("insert into repo(name, visible, owner_id) values (?,?, ?) returning id;", Integer.class, repo.name, repo.visible, ownerUserId);
         assert repoId != null;
-        template.update("insert into user_repo(user_id, repo_id, permission) values (?, ?, ?);", userId, repoId, RepoUsers.REPO_USER_PERMISSION_CREATOR);
         return repoId;
     }
 
-    public List<RepoUsers> getUserRepos(int userId, boolean ownerOnly) {
-        int permissionMask = 7;
-        if (ownerOnly) permissionMask = 4;
+    /**
+     * List Repos that userId can access, including collaborator
+     *
+     * @return
+     */
+    public List<Repo> getUserRepos(int userId) {
         return template.query("""
-                        select repo_id, repo.name as repo_name, repo.visible as repo_visible, user_id, u.name as user_name, u.email as user_email, permission
-                        from repo
-                                 join user_repo ur on repo.id = ur.repo_id
-                                 join users u on ur.user_id = u.id
-                        where ur.user_id = ? and permission & ? > 0
-                        """,
-                RepoUsers.mapper,
-                userId, permissionMask);
+                        select repo.id as repo_id, repo.name as repo_name, repo.visible as repo_visible,
+                                    repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email
+                                    from repo join users uo on repo.owner_id = uo.id
+                                where uo.id = ?
+                        union distinct
+                        select repo_id, repo.name as repo_name, repo.visible as repo_visible,
+                                    repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email
+                                        from repo
+                                    join users uo on repo.owner_id = uo.id
+                                    join user_repo ur on repo.id = ur.repo_id and ur.user_id = ?
+                                
+                                                                                 """,
+                Repo.mapper,
+                userId,
+                userId);
     }
 
     /**
@@ -64,66 +76,98 @@ public class RepoService {
      * @param repoId
      */
     public void dropRepo(int repoId) {
+        template.update("delete from issue where repo_id = ?", repoId);
         template.update("delete from repo where id = ?;", repoId);
     }
+
+    public void dropRepo(int ownerId, String repoName) {
+        template.update("delete from issue where repo_id = (select repo.id from repo where repo.owner_id = ? and repo.name = ?)", ownerId, repoName);
+        template.update("delete from repo where owner_id = ? and name = ?;", ownerId, repoName);
+    }
+
 
     /**
      * Check RepoPermission
      *
      * @return
      */
-    public boolean checkUserRepoPermission(int currentUserId, int repoId, int requiredPermission) {
+    public boolean checkUserRepoReadPermission(String ownerName, String repoName, int currentUserId) {
+        Integer isPublic = template.queryForObject("""
+                select visible from repo join uo on uo.id = repo.owner_id where uo.name = ? and repo.name =?;
+                """, Integer.class, ownerName, repoName);
+        if (isPublic != null && isPublic == Repo.VISIBLE_PUBLIC) {
+            return true;
+        }
         Integer cnt = template.queryForObject("""
-                            select count(*) from user_repo join users u on u.id = user_repo.user_id join repo r on r.id = user_repo.repo_id
-                                where repo_id = ? and u.id = ? and permission & ? = ?
+                            select count(*) from repo join uo on uo.id = repo.owner_id
+                                join user_repo ur on repo.id = ur.repo_id
+                             where uo.name = ? and repo.name =? and ur.user_id = ? and permission & ? > 0
                         """, Integer.class,
-                repoId, currentUserId, requiredPermission, requiredPermission);
+                ownerName, repoName, currentUserId, RepoCollaborator.COLLABORATOR_READ);
         return cnt != null && cnt > 0;
     }
 
-    public boolean checkUserRepoOwner(int currentUserId, String reponame) {
+    public boolean checkUserRepoWritePermission(String ownerName, String repoName, int currentUserId, int requiredPermission) {
         Integer cnt = template.queryForObject("""
-                            select count(*) from user_repo join repo r on r.id = user_repo.repo_id
-                                where r.name = ? and user_id = ? and permission = 7;
+                            select count(*) from repo join uo on uo.id = repo.owner_id
+                                join user_repo ur on repo.id = ur.repo_id
+                             where uo.name = ? and repo.name =? and ur.user_id = ? and permission & ? > 0
                         """, Integer.class,
-                reponame, currentUserId);
+                ownerName, repoName, currentUserId, RepoCollaborator.COLLABORATOR_WRITE );
         return cnt != null && cnt > 0;
     }
 
-    public GitOperation.RepoStore resolveRepo(String username, String repoName) {
+
+    public boolean checkUserRepoOwner(int currentUserId, String repoName) {
+        Integer cnt = template.queryForObject("""
+                            select count(*) from repo where owner_id = ? and name = ?;
+                        """, Integer.class,
+                currentUserId, repoName);
+        return cnt != null && cnt > 0;
+    }
+
+    public GitOperation.RepoStore resolveRepo(String ownerName, String repoName) {
         return template.query("""
-                        select repo_id, user_id
-                        from user_repo
-                                 join users u on u.id = user_repo.user_id and u.name=? and permission = 7
-                                 join repo r on r.id = user_repo.repo_id and r.name=?
+                        select * from repo join users uo on uo.id = repo.owner_id where repo.name = ? and uo.name = ?;
                         """,
                 rs -> {
                     rs.next();
                     return new GitOperation.RepoStore(rs.getInt("user_id"), rs.getInt("repo_id"));
                 },
-                username, repoName);
+                repoName, ownerName);
     }
 
-    public List<RepoUsers> getUserPublicRepo(String username) {
+    public List<Repo> getUserPublicRepos(String username) {
         return template.query("""
-                        select repo_id, repo.name as repo_name, repo.visible as repo_visible, user_id, u.name as user_name, u.email as user_email, permission
-                                                from repo
-                                                         join user_repo ur on repo.id = ur.repo_id
-                                                         join users u on ur.user_id = u.id where u.name = ? and repo.visible = 0 and permission = 7;
-                                                         """,
-                RepoUsers.mapper,
-                username);
+                        select repo.id as repo_id, repo.name as repo_name, repo.visible as repo_visible,
+                                    repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email
+                                    from repo join users uo on repo.owner_id = uo.id
+                                where uo.name = ? and repo.visible = ?
+                        union distinct
+                        select repo.id as repo_id, repo.name as repo_name, repo.visible as repo_visible,
+                                    repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email
+                                        from repo
+                                    join users uo on repo.owner_id = uo.id
+                                    join user_repo ur on repo.id = ur.repo_id and ur.user_id = (select id from users uu where uu.name = ?)
+                                where repo.visible = ?
+                                                                                 """,
+                Repo.mapper,
+                username, Repo.VISIBLE_PUBLIC,
+                username, Repo.VISIBLE_PUBLIC);
     }
 
-    public List<RepoUsers> getRepoPrivilegedUsers(int ownerUserId, String reponame) {
+    public List<RepoCollaborator> getRepoCollaborators(int ownerUserId, String repoName) {
         return template.query("""
-                        select repo_id, repo.name as repo_name, repo.visible as repo_visible, user_id, u.name as user_name, u.email as user_email, permission
-                                                from repo
-                                                         join user_repo ur on repo.id = ur.repo_id and ur.user_id = ?
-                                                         join users u on ur.user_id = u.id
-                                                         where repo.name = ?;
-                                                         """,
-                RepoUsers.mapper,
-                ownerUserId, reponame);
+                        select repo.id as repo_id, repo.name as repo_name, repo.visible as repo_visible,
+                                    repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email,
+                                    user_id, u.name as user_name, u.email as user_email, permission
+                        from repo
+                                 join users uo on repo.owner_id = uo.id
+                                 join user_repo ur on repo.id = ur.repo_id
+                                 join users u on ur.user_id = u.id
+                                 where repo.name = ? and repo.owner_id = ?;
+                                 """,
+                RepoCollaborator.mapper,
+                repoName, ownerUserId);
     }
 }

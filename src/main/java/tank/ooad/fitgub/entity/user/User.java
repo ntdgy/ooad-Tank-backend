@@ -4,8 +4,6 @@ package tank.ooad.fitgub.entity.user;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.jdbc.core.RowMapper;
-import tank.ooad.fitgub.entity.repo.Repo;
-import tank.ooad.fitgub.entity.repo.RepoUsers;
 
 public class User {
     @JsonIgnore

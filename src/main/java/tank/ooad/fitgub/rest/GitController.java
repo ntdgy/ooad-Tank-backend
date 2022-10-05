@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import tank.ooad.fitgub.entity.git.GitCommitTree;
 import tank.ooad.fitgub.entity.git.GitTreeEntry;
-import tank.ooad.fitgub.entity.repo.RepoUsers;
+import tank.ooad.fitgub.entity.repo.RepoCollaborator;
 import tank.ooad.fitgub.git.GitOperation;
 import tank.ooad.fitgub.service.RepoService;
 import tank.ooad.fitgub.utils.AttributeKeys;
@@ -46,18 +46,18 @@ public class GitController {
      *
      * @return GitCommitTree
      */
-    @GetMapping("/api/git/{username}/{reponame}/commit_tree")
-    public Return<GitCommitTree> getCommitAndTree(@PathVariable String username, @PathVariable String reponame,
-                              @RequestParam Optional<String> resolve,
-                              HttpSession session) {
+    @GetMapping("/api/git/{ownerName}/{repoName}/commit_tree")
+    public Return<GitCommitTree> getCommitAndTree(@PathVariable String ownerName, @PathVariable String repoName,
+                                                  @RequestParam Optional<String> resolve,
+                                                  HttpSession session) {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
 
         // Resolve Repo
-        GitOperation.RepoStore repoStore = repoService.resolveRepo(username, reponame);
+        GitOperation.RepoStore repoStore = repoService.resolveRepo(ownerName, repoName);
         if (repoStore == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
 
         // checkPermission: require Read
-        if (!repoService.checkUserRepoPermission(currentUserId, repoStore.repoId(), RepoUsers.REPO_USER_PERMISSION_READ)) {
+        if (!repoService.checkUserRepoReadPermission(ownerName, repoName, currentUserId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
 

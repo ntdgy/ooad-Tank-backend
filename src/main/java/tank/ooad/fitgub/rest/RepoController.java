@@ -2,7 +2,7 @@ package tank.ooad.fitgub.rest;
 
 import org.springframework.web.bind.annotation.*;
 import tank.ooad.fitgub.entity.repo.Repo;
-import tank.ooad.fitgub.entity.repo.RepoUsers;
+import tank.ooad.fitgub.entity.repo.RepoCollaborator;
 import tank.ooad.fitgub.git.GitOperation;
 import tank.ooad.fitgub.service.RepoService;
 import tank.ooad.fitgub.utils.AttributeKeys;
@@ -41,35 +41,17 @@ public class RepoController {
         return Return.OK;
     }
 
-    /**
-     *
-     * @param session
-     * @param permission null if owr, "owner" if o--,
-     * @return
-     */
     @RequireLogin
     @GetMapping("/api/repo/list_self")
-    public Return<List<RepoUsers>> listMyRepo(HttpSession session, @RequestParam Optional<String> permission) {
+    public Return<List<Repo>> listMyRepo(HttpSession session, @RequestParam Optional<String> permission) {
         int userId = (int) AttributeKeys.USER_ID.getValueNonNull(session);
-        boolean ownerOnly = permission.isPresent() && permission.get().equals("owner");
-        var lst = repoService.getUserRepos(userId, ownerOnly);
+        var lst = repoService.getUserRepos(userId);
         return new Return<>(ReturnCode.OK, lst);
     }
 
     @GetMapping("/api/repo/list_pub/{username}")
-    public Return<List<RepoUsers>> listUserPublicRepo(@PathVariable String username) {
-        var lst = repoService.getUserPublicRepo(username);
+    public Return<List<Repo>> listUserPublicRepo(@PathVariable String username) {
+        var lst = repoService.getUserPublicRepos(username);
         return new Return<>(ReturnCode.OK, lst);
-    }
-
-    // Repo Permissions
-    @RequireLogin
-    @GetMapping("/api/repo/{reponame}/setting/permission")
-    public Return<List<RepoUsers>> listRepoPermission(@PathVariable String reponame, HttpSession session) {
-        int userId = (int) AttributeKeys.USER_ID.getValue(session);
-        if (!repoService.checkUserRepoOwner(userId, reponame)) {
-            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
-        }
-        return new Return<>(ReturnCode.OK, repoService.getRepoPrivilegedUsers(userId, reponame));
     }
 }
