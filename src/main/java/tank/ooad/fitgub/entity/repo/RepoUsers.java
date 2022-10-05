@@ -1,5 +1,7 @@
 package tank.ooad.fitgub.entity.repo;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.jdbc.core.RowMapper;
 import tank.ooad.fitgub.entity.user.User;
 import tank.ooad.fitgub.utils.MyConfig;
@@ -11,13 +13,27 @@ public class RepoUsers {
     public Repo repo;
     public User user;
 
-    @Min(value = 0)
-    @Max(value = 1)
+    @JsonIgnore
     public int permission;
 
     public String gitUrl;
 
     public RepoUsers() {
+    }
+//    private boolean isOwner;
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public boolean isOwner() {
+        return (this.permission & REPO_USER_PERMISSION_OWNER) == REPO_USER_PERMISSION_OWNER;
+    }
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public boolean canWrite() {
+        return (this.permission & REPO_USER_PERMISSION_WRITE) == REPO_USER_PERMISSION_WRITE;
+    }
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public boolean canRead() {
+        return (this.permission & REPO_USER_PERMISSION_READ) == REPO_USER_PERMISSION_READ;
     }
 
     public RepoUsers(Repo repo, User user, int permission) {
