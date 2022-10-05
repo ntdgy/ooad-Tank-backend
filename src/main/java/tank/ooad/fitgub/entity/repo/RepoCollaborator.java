@@ -14,25 +14,21 @@ public class RepoCollaborator {
 
     public RepoCollaborator() {
     }
-//    private boolean isOwner;
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    public boolean canWrite() {
-        return (this.permission & COLLABORATOR_WRITE) == COLLABORATOR_WRITE;
-    }
 
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    public boolean canRead() {
-        return (this.permission & COLLABORATOR_READ) == COLLABORATOR_READ;
-    }
+    public boolean canWrite;
+    public boolean canRead;
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     public boolean getIsOwner() {
         return user.id == repo.owner.id;
     }
+
     public RepoCollaborator(Repo repo, User user, int permission) {
         this.repo = repo;
         this.user = user;
         this.permission = permission;
+        this.canWrite = (this.permission & COLLABORATOR_WRITE) == COLLABORATOR_WRITE;
+        this.canRead = (this.permission & COLLABORATOR_READ) == COLLABORATOR_READ;
     }
 
     public static final RowMapper<RepoCollaborator> mapper = (rs, rowNum) -> {

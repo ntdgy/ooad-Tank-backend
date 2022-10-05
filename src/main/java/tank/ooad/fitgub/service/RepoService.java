@@ -170,4 +170,13 @@ public class RepoService {
                 RepoCollaborator.mapper,
                 repoName, ownerUserId);
     }
+
+    public void addRepoCollaborator(int ownerUserId, String repoName, int collaboratorUserId, int permission) {
+        template.update("""
+                                insert into user_repo (user_id, repo_id, permission)
+                                select ?, repo.id, ? from repo where repo.owner_id = ? and repo.name = ?
+                                ON CONFLICT (repo_id, user_id) DO UPDATE
+                                  SET permission = ?
+                                """, collaboratorUserId, permission, ownerUserId, repoName, permission);
+    }
 }

@@ -45,4 +45,9 @@ public class UserService {
                 select id, name, email from users where id = ?;
                 """, User.mapper, userId);
     }
+    public User findUser(String name, String email) {
+        return jdbcTemplate.queryForObject("""
+                select id, name, email from users where name = ? or email = ?;
+                """, User.mapper, name, email);
+    }
 }

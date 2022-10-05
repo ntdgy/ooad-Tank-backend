@@ -8,10 +8,11 @@ import org.springframework.jdbc.core.RowMapper;
 public class User {
     @JsonIgnore
     public int id;
+    @JsonProperty(defaultValue = "")
     public String name;
-
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY, defaultValue = "")
     public String password;
+    @JsonProperty(defaultValue = "")
     public String email;
 
     public User() {

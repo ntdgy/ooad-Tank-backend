@@ -1,11 +1,11 @@
 package tank.ooad.fitgub.rest;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.boot.context.properties.bind.validation.BindValidationException;
+import org.springframework.web.bind.annotation.*;
 import tank.ooad.fitgub.entity.repo.RepoCollaborator;
+import tank.ooad.fitgub.entity.user.User;
 import tank.ooad.fitgub.service.RepoService;
+import tank.ooad.fitgub.service.UserService;
 import tank.ooad.fitgub.utils.AttributeKeys;
 import tank.ooad.fitgub.utils.Return;
 import tank.ooad.fitgub.utils.ReturnCode;
@@ -17,19 +17,47 @@ import java.util.List;
 @RestController
 public class RepoSettingsController {
     private final RepoService repoService;
-    public RepoSettingsController(RepoService repoService) {
+    private final UserService userService;
+
+    public RepoSettingsController(RepoService repoService, UserService userService) {
         this.repoService = repoService;
+        this.userService = userService;
     }
 
     // Repo Settings
     @RequireLogin
-    @GetMapping("/api/repo/{reponame}/settings/collaborator")
-    public Return<List<RepoCollaborator>> listRepoCollaborators(@PathVariable String reponame, HttpSession session) {
+    @GetMapping("/api/repo/{repoName}/settings/collaborator")
+    public Return<List<RepoCollaborator>> listRepoCollaborators(@PathVariable String repoName, HttpSession session) {
         int userId = (int) AttributeKeys.USER_ID.getValue(session);
-        if (!repoService.checkUserRepoOwner(userId, reponame)) {
+        if (!repoService.checkUserRepoOwner(userId, repoName)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
-        return new Return<>(ReturnCode.OK, repoService.getRepoCollaborators(userId, reponame));
+        var cols = repoService.getRepoCollaborators(userId, repoName);
+        return new Return<>(ReturnCode.OK, cols);
+    }
+
+    /**
+     * Add collaborator with email or username
+     *
+     * @param repoName
+     * @param user
+     * @param session
+     * @return
+     */
+    @RequireLogin
+    @PostMapping("/api/repo/{repoName}/settings/collaborator")
+    public Return<List<RepoCollaborator>> addOrAlterCollaborators(@PathVariable String repoName, @RequestBody RepoCollaborator collaborator, HttpSession session) {
+        int userId = (int) AttributeKeys.USER_ID.getValue(session);
+        if (!repoService.checkUserRepoOwner(userId, repoName)) {
+            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+        }
+        User invited = userService.findUser(collaborator.user.name, collaborator.user.email);
+        if (invited == null || invited.id == userId)
+            return new Return<>(ReturnCode.USER_NOTFOUND);
+        int permission = RepoCollaborator.COLLABORATOR_READ;
+        if (collaborator.canWrite) permission |= RepoCollaborator.COLLABORATOR_WRITE;
+        repoService.addRepoCollaborator(userId, repoName, invited.id, permission);
+        return new Return<>(ReturnCode.OK, repoService.getRepoCollaborators(userId, repoName));
     }
 
     @RequireLogin
