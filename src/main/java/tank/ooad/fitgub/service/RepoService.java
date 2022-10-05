@@ -29,7 +29,7 @@ public class RepoService {
      */
     public boolean checkRepoDuplicate(Repo repo, int userId) {
         int cnt = template.queryForObject("select count(*) from repo join user_repo ur on repo.id = ur.repo_id\n" +
-                "where repo.name = ? and ur.user_id = ?;", Integer.class, repo.name, userId);
+                                          "where repo.name = ? and ur.user_id = ?;", Integer.class, repo.name, userId);
         return cnt != 0;
     }
 
@@ -113,7 +113,7 @@ public class RepoService {
                                 join user_repo ur on repo.id = ur.repo_id
                              where uo.name = ? and repo.name =? and ur.user_id = ? and permission & ? > 0
                         """, Integer.class,
-                ownerName, repoName, currentUserId, RepoCollaborator.COLLABORATOR_WRITE );
+                ownerName, repoName, currentUserId, RepoCollaborator.COLLABORATOR_WRITE);
         return cnt != null && cnt > 0;
     }
 
@@ -124,17 +124,6 @@ public class RepoService {
                         """, Integer.class,
                 currentUserId, repoName);
         return cnt != null && cnt > 0;
-    }
-
-    public GitOperation.RepoStore resolveRepo(String ownerName, String repoName) {
-        return template.query("""
-                        select repo.owner_id as user_id, repo.id as repo_id from repo join users uo on uo.id = repo.owner_id where repo.name = ? and uo.name = ?;
-                        """,
-                rs -> {
-                    rs.next();
-                    return new GitOperation.RepoStore(rs.getInt("user_id"), rs.getInt("repo_id"));
-                },
-                repoName, ownerName);
     }
 
     public List<Repo> getUserPublicRepos(String username) {
@@ -173,10 +162,30 @@ public class RepoService {
 
     public void addRepoCollaborator(int ownerUserId, String repoName, int collaboratorUserId, int permission) {
         template.update("""
-                                insert into user_repo (user_id, repo_id, permission)
-                                select ?, repo.id, ? from repo where repo.owner_id = ? and repo.name = ?
-                                ON CONFLICT (repo_id, user_id) DO UPDATE
-                                  SET permission = ?
-                                """, collaboratorUserId, permission, ownerUserId, repoName, permission);
+                insert into user_repo (user_id, repo_id, permission)
+                select ?, repo.id, ? from repo where repo.owner_id = ? and repo.name = ?
+                ON CONFLICT (repo_id, user_id) DO UPDATE
+                  SET permission = ?
+                """, collaboratorUserId, permission, ownerUserId, repoName, permission);
+    }
+
+    public Repo getRepo(int userId, String repoName) {
+        return template.queryForObject("""
+                                select repo.id as repo_id, repo.name as repo_name, repo.visible as repo_visible,
+                            repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email
+                            from repo join users uo on repo.owner_id = uo.id
+                        where repo.owner_id = ? and repo.name = ?""", Repo.mapper,
+                userId, repoName
+        );
+    }
+
+    public Repo getRepo(String ownerName, String repoName) {
+        return template.queryForObject("""
+                                select repo.id as repo_id, repo.name as repo_name, repo.visible as repo_visible,
+                            repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email
+                            from repo join users uo on repo.owner_id = uo.id
+                        where uo.name = ? and repo.name = ?""", Repo.mapper,
+                ownerName, repoName
+        );
     }
 }

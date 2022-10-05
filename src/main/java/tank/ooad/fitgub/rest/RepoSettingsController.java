@@ -1,9 +1,9 @@
 package tank.ooad.fitgub.rest;
 
-import org.springframework.boot.context.properties.bind.validation.BindValidationException;
 import org.springframework.web.bind.annotation.*;
 import tank.ooad.fitgub.entity.repo.RepoCollaborator;
 import tank.ooad.fitgub.entity.user.User;
+import tank.ooad.fitgub.git.GitOperation;
 import tank.ooad.fitgub.service.RepoService;
 import tank.ooad.fitgub.service.UserService;
 import tank.ooad.fitgub.utils.AttributeKeys;
@@ -12,16 +12,19 @@ import tank.ooad.fitgub.utils.ReturnCode;
 import tank.ooad.fitgub.utils.permission.RequireLogin;
 
 import javax.servlet.http.HttpSession;
+import java.io.IOException;
 import java.util.List;
 
 @RestController
 public class RepoSettingsController {
     private final RepoService repoService;
     private final UserService userService;
+    private final GitOperation gitController;
 
-    public RepoSettingsController(RepoService repoService, UserService userService) {
+    public RepoSettingsController(RepoService repoService, UserService userService, GitOperation gitController) {
         this.repoService = repoService;
         this.userService = userService;
+        this.gitController = gitController;
     }
 
     // Repo Settings
@@ -65,7 +68,13 @@ public class RepoSettingsController {
     public Return<Void> deleteRepo(@PathVariable String repoName, HttpSession session) {
         int userId = (int) AttributeKeys.USER_ID.getValueNonNull(session);
         if (!repoService.checkUserRepoOwner(userId, repoName)) return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
-        repoService.dropRepo(userId, repoName);
+        var repo = repoService.getRepo(userId, repoName);
+        try {
+            gitController.deleteGitRepo(repo);
+            repoService.dropRepo(userId, repoName);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         return Return.OK;
     }
 }

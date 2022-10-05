@@ -32,8 +32,9 @@ public class RepoController {
 
         if (repoService.checkRepoDuplicate(repo, userId)) return new Return<>(ReturnCode.REPO_DUPLICATED);
         int repoId = repoService.createRepo(repo, userId);
+        var createdRepo = repoService.getRepo(userId, repo.name);
         try {
-            gitOperation.createGitRepo(new GitOperation.RepoStore(userId, repoId));
+            gitOperation.createGitRepo(createdRepo);
         } catch (Exception e) {
             repoService.dropRepo(repoId);
             throw new RuntimeException(e);

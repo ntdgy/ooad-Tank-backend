@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import tank.ooad.fitgub.entity.git.GitCommitTree;
 import tank.ooad.fitgub.entity.git.GitTreeEntry;
+import tank.ooad.fitgub.entity.repo.Repo;
 import tank.ooad.fitgub.entity.repo.RepoCollaborator;
 import tank.ooad.fitgub.git.GitOperation;
 import tank.ooad.fitgub.service.RepoService;
@@ -53,15 +54,15 @@ public class GitController {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
 
         // Resolve Repo
-        GitOperation.RepoStore repoStore = repoService.resolveRepo(ownerName, repoName);
-        if (repoStore == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
+        Repo repo = repoService.getRepo(ownerName, repoName);
+        if (repo == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
 
         // checkPermission: require Read
         if (!repoService.checkUserRepoReadPermission(ownerName, repoName, currentUserId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
 
-        try (Repository repository = gitOperation.getRepository(repoStore)) {
+        try (Repository repository = gitOperation.getRepository(repo)) {
             ObjectId targetCommit = null;
             if (resolve.isPresent()) targetCommit = repository.resolve(resolve.get());
             else targetCommit = repository.resolve("HEAD");

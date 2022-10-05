@@ -55,6 +55,7 @@ public class Repo {
     public static final int VISIBLE_PRIVATE = 1;
 
     public static final RowMapper<Repo> mapper = (rs, rowNum) -> {
+        if (rowNum == 0) return null;
         Repo repo = new Repo(rs.getInt("repo_id"), rs.getString("repo_name"), rs.getInt("repo_visible"));
         repo.owner = new User(rs.getInt("repo_owner_id"), rs.getString("repo_owner_name"), rs.getString("repo_owner_email"));
         return repo;
