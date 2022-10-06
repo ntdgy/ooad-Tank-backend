@@ -28,7 +28,7 @@ public class IssueContentService {
     public int insertIssueContent(int issueId, int commentId, int userId, String content) {
         Integer issueContentId = jdbcTemplate.queryForObject("""
                 insert into issue_content(issue_id, comment_id, sender_user_id, content)
-                values (?, ?, ?, ?);
+                values (?, ?, ?, ?) returning id;
                 """, Integer.class, issueId, commentId, userId, content);
         if (issueContentId == null) return 0;
         jdbcTemplate.update("""

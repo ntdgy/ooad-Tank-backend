@@ -22,6 +22,7 @@ public class RepoIssueService {
     public Issue getIssue(int issueId) {
         return jdbcTemplate.queryForObject("""
                  select i.id     as id,
+                        i.repo_issue_id as repo_issue_id,
                         i.title  as title,
                         i.tag    as tag,
                         r.name   as repo_name,

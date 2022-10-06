@@ -30,8 +30,9 @@ public class Issue {
     public Issue() {
     }
 
-    public Issue(int id, String title, String tag, User issuer, String owner_name, String repo_name, String status) {
+    public Issue(int id, int issue_id, String title, String tag, User issuer, String owner_name, String repo_name, String status) {
         this.id = id;
+        this.issue_id = issue_id;
         this.title = title;
         if (tag != null)
             this.tag = List.of(tag.split(","));
@@ -43,9 +44,10 @@ public class Issue {
 
     public static final RowMapper<Issue> mapper = (rs, rowNum) -> {
         if (rowNum == 0) return null;
-        return new Issue(rs.getInt("id"), rs.getString("title"),
-                rs.getString("tag"), new User(rs.getInt("issuer_id"),
-                rs.getString("issuer_name"), rs.getString("issuer_email")),
+        return new Issue(rs.getInt("id"), rs.getInt("repo_issue_id"),
+                rs.getString("title"), rs.getString("tag"),
+                new User(rs.getInt("issuer_id"),rs.getString("issuer_name"),
+                        rs.getString("issuer_email")),
                 rs.getString("owner_name"), rs.getString("repo_name"),
                 rs.getString("status"));
     };

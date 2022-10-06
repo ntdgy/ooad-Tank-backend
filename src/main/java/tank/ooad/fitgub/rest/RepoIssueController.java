@@ -20,19 +20,20 @@ public class RepoIssueController {
 
     @RequireLogin
     @PostMapping("/api/repo/{ownerName}/{repoName}/issue/create")
-    public Return<Void> createIssue(@PathVariable String ownerName, @PathVariable String repoName,
-                                    @RequestBody Issue issue,
-                                    HttpSession session) {
+    public Return<Integer> createIssue(@PathVariable String ownerName, @PathVariable String repoName,
+                                       @RequestBody Issue issue,
+                                       HttpSession session) {
         int userId = (int) AttributeKeys.USER_ID.getValue(session);
         StringBuilder sb = new StringBuilder();
-        for (String s : issue.tag) {
-            sb.append(s);
-            sb.append(',');
-        }
-        sb.deleteCharAt(sb.length() - 1);
-        int id = repoIssueService.createIssue(ownerName,repoName,issue.title,userId,sb.toString(),issue.initial_content.content);
-
-
+        if (issue.tag != null) {
+            for (String s : issue.tag) {
+                sb.append(s);
+                sb.append(',');
+            }
+            sb.deleteCharAt(sb.length() - 1);
+        } else sb.append("null");
+        int id = repoIssueService.createIssue(ownerName, repoName, issue.title, userId, sb.toString(), issue.initial_content.content);
+        return new Return<>(ReturnCode.OK, id);
     }
 
     @GetMapping("/api/repo/{ownerName}/{repoName}/issue/{repoIssueId}")
