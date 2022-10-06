@@ -11,6 +11,9 @@ public class RepoIssueService {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private IssueContentService issueContentService;
+
 
     /*
      * @param issueId issue id
@@ -51,24 +54,12 @@ public class RepoIssueService {
                 set next_issue_id = next_issue_id + 1
                 where name = ?;
                 """, repoName);
-        return insertIssueContent((int) issue.get("id"), (int) issue.get("next_comment_id"), IssuerId, content)
+        return issueContentService.insertIssueContent((int) issue.get("id"), (int) issue.get("next_comment_id"), IssuerId, content)
                 == 0 ? 0 : (int) issue.get("repo_issue_id");
 
     }
 
-    public int insertIssueContent(int issueId, int commentId, int userId, String content) {
-        Integer issueContentId = jdbcTemplate.queryForObject("""
-                insert into issue_content(issue_id, comment_id, sender_user_id, content)
-                values (?, ?, ?, ?);
-                """, Integer.class, issueId, commentId, userId, content);
-        if (issueContentId == null) return 0;
-        jdbcTemplate.update("""
-                update issue
-                set next_comment_id = next_comment_id + 1
-                where id = ?;
-                """, issueId);
-        return issueContentId;
-    }
+
 
 }
 

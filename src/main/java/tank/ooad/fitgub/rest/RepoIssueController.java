@@ -41,7 +41,6 @@ public class RepoIssueController {
                                         @PathVariable int repoIssueId,
                                         HttpSession session) {
         int userId = (int) AttributeKeys.USER_ID.getValue(session);
-        //int id = repoIssueService.createIssue(ownerName, repoName, issue.title, userId, issue.tag);
-
+        return Return.OK;
     }
 }
