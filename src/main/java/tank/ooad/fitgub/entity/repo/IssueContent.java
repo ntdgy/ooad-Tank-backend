@@ -13,6 +13,8 @@ public class IssueContent {
     @JsonIgnore
     public int issue_id;
 
+    public int issue_content_id;
+
     public User sender;
 
     public String content;
@@ -22,17 +24,18 @@ public class IssueContent {
     public IssueContent() {
     }
 
-    public IssueContent(int content_id, int issue_id,User sender, String content) {
+    public IssueContent(int content_id, int issue_id, int issue_content_id, User sender, String content) {
         this.content_id = content_id;
         this.issue_id = issue_id;
+        this.issue_content_id = issue_content_id;
         this.sender = sender;
         this.content = content;
     }
 
     public static final RowMapper<IssueContent> mapper = (rs, rowNum) -> {
-        if (rowNum == 0) return null;
         return new IssueContent(rs.getInt("content_id"), rs.getInt("issue_id"),
-                new User(rs.getInt("sender_id"), rs.getString("sender_name"), rs.getString("sender_email")),
+                rs.getInt("comment_id"),
+                new User(rs.getInt("sender_user_id"), rs.getString("sender_name"), rs.getString("sender_email")),
                 rs.getString("content"));
     };
 }

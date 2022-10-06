@@ -5,6 +5,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import tank.ooad.fitgub.entity.repo.Issue;
+import tank.ooad.fitgub.entity.repo.IssueContent;
+
+import java.util.List;
 
 
 @Component
@@ -13,113 +16,172 @@ public class RepoIssueService {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    @Autowired
-    private IssueContentService issueContentService;
 
-
-    /*
-     * @param issueId issue id
-     * This function is used to get issue by id
+    /**
+     * Return issue id (serial, pkey)
+     *
+     * @param ownerName
+     * @param repoName
+     * @param repoIssueId
+     * @return
      */
-    public Issue getIssue(int issueId) {
+    public int resolveIssue(String ownerName, String repoName, int repoIssueId) {
         return jdbcTemplate.queryForObject("""
-                 select i.id     as id,
-                        i.repo_issue_id as repo_issue_id,
-                        i.title  as title,
-                        i.tag    as tag,
-                        r.name   as repo_name,
-                        u1.id    as issuer_id,
-                        u1.name  as issuer_name,
-                        u1.email as issuer_email,
-                        u2.name  as owner_name,
-                        i.status as status
-                from issue i
-                         join repo r   on i.repo_id = r.id
-                         join users u1 on i.issuer_user_id = u1.id
-                         join users u2 on r.owner_id = u2.id
-                where i.id = ?;
-                 """, Issue.mapper, issueId);
+                    select issue.id from issue
+                        join repo r on r.id = issue.repo_id
+                        join users uo on uo.id = r.owner_id
+                    where uo.name = ? and r.name = ? and issue.repo_issue_id = ?;
+                """, Integer.class, ownerName, repoName, repoIssueId);
     }
 
-    public int createIssue(String ownerName, String repoName, String title, int IssuerId, String tag, String content) {
-        var issue = jdbcTemplate.queryForMap("""
-                insert into issue(repo_id, repo_issue_id, issuer_user_id, title,tag)
-                select r.id, r.next_issue_id, ?, ?,?
-                from repo r
-                         join users uo on r.owner_id = uo.id
-                where r.name = ?
-                  and uo.name = ?
-                returning issue.id as id, issue.repo_issue_id as repo_issue_id,issue.next_comment_id as next_comment_id;
-                                """, IssuerId, title, tag, repoName, ownerName);
-        if (issue.get("id") == null || issue.get("repo_issue_id") == null) return 0;
+    private int getRepoNextIssueId(int repoId) {
+        return jdbcTemplate.queryForObject(
+                "update repo set next_issue_id = repo.next_issue_id + 1 where id = ? returning next_issue_id;",
+                Integer.class, repoId);
+    }
+    private int getIssueNextCommentId(int issueId) {
+        return jdbcTemplate.queryForObject(
+                "update issue set next_comment_id = issue.next_comment_id + 1 where id = ? returning next_comment_id;",
+                Integer.class, issueId);
+    }
+
+    /***
+     * Return generated issue id (serial)
+     * @param repoId
+     * @param title
+     * @param IssuerId
+     * @param tag
+     * @return
+     */
+    public int createIssue(int repoId, String title, int IssuerId, String tag) {
+        var repoIssueId = jdbcTemplate.queryForObject(
+                "update repo set next_issue_id = repo.next_issue_id + 1 where id = ? returning next_issue_id;",
+                Integer.class, repoId);
+        return jdbcTemplate.queryForObject("""
+                        insert into issue(repo_id, repo_issue_id, issuer_user_id, title, tag)
+                        values (?,?,?,?,?,?)
+                        returning issue.id as id;""",
+                Integer.class,
+                repoId, repoIssueId, IssuerId, title, tag);
+    }
+
+    public int insertIssueContent(int issueId, int senderUserId, IssueContent content) {
+        int commentId = getIssueNextCommentId(issueId);
+        return jdbcTemplate.queryForObject("""
+                insert into issue_content(issue_id, comment_id, sender_user_id, content) 
+                values (?,?,?,?) returning id;
+                """, Integer.class,
+                issueId, commentId, senderUserId, content.content);
+    }
+
+    public void closeIssue(int issueId) {
         jdbcTemplate.update("""
-                update repo
-                set next_issue_id = next_issue_id + 1
-                where name = ?;
-                """, repoName);
-        return issueContentService.insertIssueContent((int) issue.get("id"), (int) issue.get("next_comment_id"), IssuerId, content)
-                == 0 ? 0 : (int) issue.get("repo_issue_id");
+                update issue set status = 'closed' where id = ?;
+                """, issueId);
     }
 
-    public int closeIssue(String ownerName, String repoName, int issueId) {
-        try {
-            jdbcTemplate.update("""
-                    update issue
-                    set status = 'closed'
-                    where id = (select i.id
-                                from issue i
-                                         join repo r on i.repo_id = r.id
-                                where r.name = ?
-                                  and r.owner_id = (select id from users where name = ?)
-                                  and i.repo_issue_id = ?);
-                    """, repoName, ownerName, issueId);
-        } catch (Exception e) {
-            log.error(e.getMessage());
-            return 0;
-        }
-        return 1;
+    public void reopenIssue(int issueId) {
+        jdbcTemplate.update("""
+                update issue set status = 'open' where id = ?;
+                """, issueId);
     }
 
-    public int reopenIssue(String ownerName, String repoName, int issueId) {
-        try {
-            jdbcTemplate.update("""
-                    update issue
-                    set status = 'open'
-                    where id = (select i.id
-                                from issue i
-                                         join repo r on i.repo_id = r.id
-                                where r.name = ?
-                                  and r.owner_id = (select id from users where name = ?)
-                                  and i.repo_issue_id = ?);
-                    """, repoName, ownerName, issueId);
-        } catch (Exception e) {
-            log.error(e.getMessage());
-            return 0;
-        }
-        return 1;
-    }
-
-
-    public boolean checkIssueOwner(int currentUserId, String ownerName, String repoName, int repoIssueId) {
+    public boolean checkIssueOwner(int currentUserId, int issueId) {
         Integer cnt = jdbcTemplate.queryForObject("""
-                select count(*)
-                from issue
-                         join repo r on issue.repo_id = r.id and r.name = ?
-                         join users uo on r.owner_id = uo.id and uo.name = ?
-                    where issue.repo_issue_id = ? and issue.issuer_user_id = ?
-                """, Integer.class, repoName, ownerName, repoIssueId, currentUserId);
+                select count(*) from issue where issue.id = ? and issue.issuer_user_id = ?
+                """, Integer.class, issueId, currentUserId);
         return cnt != null && cnt > 0;
     }
 
-    public boolean checkIssueClosable(String ownerName, String repoName, int repoIssueId) {
+    public boolean checkIssueClosable(int issueId) {
         Integer cnt = jdbcTemplate.queryForObject("""
-                select count(*)
-                from issue
-                         join repo r on issue.repo_id = r.id and r.name = ?
-                         join users uo on r.owner_id = uo.id and uo.name = ?
-                    where issue.repo_issue_id = ? and issue.status = 'open'
-                """, Integer.class, repoName, ownerName, repoIssueId);
+                select count(*) from issue
+                    where issue.id = ? and issue.status = 'open'
+                """, Integer.class, issueId);
         return cnt != null && cnt > 0;
+    }
+
+//    public Issue getIssue(String ownerName, String repoName, int repoIssueId) {
+//        return jdbcTemplate.queryForObject("""
+//                select issue.id, issue.repo_issue_id, issue.title, issue.status, issue.tag,
+//                       ui.id as issuer_id, ui.name as issuer_name, ui.email as issuer_email
+//                from issue
+//                    join users ui on issue.issuer_user_id = ui.id
+//                where issue.id = (select iss.id
+//                            from issue as iss
+//                                     join repo r on r.id = iss.repo_id
+//                                     join users uo on uo.id = r.owner_id
+//                            where uo.name = ?
+//                              and r.name = ?
+//                              and iss.repo_issue_id = ?)
+//                """,
+//                Issue.mapper,
+//                ownerName, repoName, repoIssueId);
+//    }
+public Issue getIssue(String ownerName, String repoName, int repoIssueId) {
+    return jdbcTemplate.queryForObject("""
+                with issue_content as (select iss.id
+                                       from issue as iss
+                                                join repo r on r.id = iss.repo_id
+                                                join users uo on uo.id = r.owner_id
+                                       where uo.name = ?
+                                         and r.name = ?
+                                         and iss.repo_issue_id = ?)
+                select issue.id,
+                       issue.repo_issue_id,
+                       issue.title,
+                       issue.status,
+                       issue.tag,
+                       ui.id    as issuer_id,
+                       ui.name  as issuer_name,
+                       ui.email as issuer_email
+                from issue
+                         join users ui on issue.issuer_user_id = ui.id
+                    and issue.id in (select id from issue_content);
+                """,
+            Issue.mapper,
+            ownerName, repoName, repoIssueId);
+}
+
+    public List<Issue> listIssues(String ownerName, String repoName) {
+        return jdbcTemplate.query("""
+                with issue_content as (select iss.id
+                                       from issue as iss
+                                                join repo r on r.id = iss.repo_id
+                                                join users uo on uo.id = r.owner_id
+                                       where uo.name = ?
+                                         and r.name = ?)
+                select issue.id,
+                       issue.repo_issue_id,
+                       issue.title,
+                       issue.status,
+                       issue.tag,
+                       ui.id    as issuer_id,
+                       ui.name  as issuer_name,
+                       ui.email as issuer_email
+                from issue
+                         join users ui on issue.issuer_user_id = ui.id
+                    and issue.id in (select id from issue_content);
+                """,
+                Issue.mapper,
+                ownerName, repoName);
+    }
+
+    public void loadContents(Issue issue) {
+        issue.contents = jdbcTemplate.query("""
+                select i.id             as content_id,
+                       i.issue_id       as issue_id,
+                       i.sender_user_id as sender_user_id,
+                       u.name           as sender_name,
+                       u.email          as sender_email,
+                       i.content        as content,
+                       i.comment_id     as comment_id
+                from issue_content i
+                         join users u on i.sender_user_id = u.id
+                where issue_id = ?
+                order by comment_id;
+                        """,IssueContent.mapper,issue.id
+        );
     }
 }
 

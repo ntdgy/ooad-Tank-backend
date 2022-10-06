@@ -16,6 +16,15 @@ public class RepoService {
         this.template = template;
     }
 
+    public int resolveRepo(String ownerName, String repoName) {
+        return template.queryForObject("""
+                select repo.id from repo
+                         join users uo on repo.owner_id = uo.id
+                    where uo.name = ? and repo.name = ?;
+                """, Integer.class, ownerName, repoName);
+    }
+
+
     /**
      * Check whether Repo.name is duplicated under namespace userId.
      *
