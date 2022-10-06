@@ -67,11 +67,12 @@ public class RepoIssueService {
 
     public int insertIssueContent(int issueId, int senderUserId, IssueContent content) {
         int commentId = getIssueNextCommentId(issueId);
-        return jdbcTemplate.queryForObject("""
+        jdbcTemplate.queryForObject("""
                 insert into issue_content(issue_id, comment_id, sender_user_id, content) 
                 values (?,?,?,?) returning id;
                 """, Integer.class,
                 issueId, commentId, senderUserId, content.content);
+        return commentId;
     }
 
     public void closeIssue(int issueId) {

@@ -3,6 +3,7 @@ package tank.ooad.fitgub.rest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import tank.ooad.fitgub.entity.repo.Issue;
+import tank.ooad.fitgub.entity.repo.IssueContent;
 import tank.ooad.fitgub.service.RepoIssueService;
 import tank.ooad.fitgub.service.RepoService;
 import tank.ooad.fitgub.utils.AttributeKeys;
@@ -23,9 +24,11 @@ public class RepoIssueController {
 
     @RequireLogin
     @PostMapping("/api/repo/{ownerName}/{repoName}/issue/create")
-    public Return<Integer> createIssue(@PathVariable String ownerName, @PathVariable String repoName,
-                                       @RequestBody Issue issue,
-                                       HttpSession session) {
+    public Return<Integer> createIssue(
+            @PathVariable String ownerName,
+            @PathVariable String repoName,
+            @RequestBody Issue issue,
+            HttpSession session) {
         int userId = (int) AttributeKeys.USER_ID.getValue(session);
         StringBuilder sb = new StringBuilder();
         if (issue.tag != null) {
@@ -46,10 +49,11 @@ public class RepoIssueController {
     }
 
     @GetMapping("/api/repo/{ownerName}/{repoName}/issue/{repoIssueId}")
-    public Return<Issue> getIssue(@PathVariable String ownerName,
-                                  @PathVariable String repoName,
-                                  @PathVariable int repoIssueId,
-                                  HttpSession session) {
+    public Return<Issue> getIssue(
+            @PathVariable String ownerName,
+            @PathVariable String repoName,
+            @PathVariable int repoIssueId,
+            HttpSession session) {
         // check private repo
         var repo = repoService.getRepo(ownerName, repoName);
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
@@ -62,21 +66,23 @@ public class RepoIssueController {
     }
 
     @GetMapping("/api/repo/{ownerName}/{repoName}/issue")
-    public Return<List<Issue>> listIssues(@PathVariable String ownerName,
-                                          @PathVariable String repoName) {
+    public Return<List<Issue>> listIssues(
+            @PathVariable String ownerName,
+            @PathVariable String repoName) {
         var issue = repoIssueService.listIssues(ownerName, repoName);
         return new Return<>(ReturnCode.OK, issue);
     }
 
     @RequireLogin
     @PostMapping("/api/repo/{ownerName}/{repoName}/issue/{repoIssueId}/close")
-    public Return<Void> closeIssue(@PathVariable String ownerName, @PathVariable String repoName, @PathVariable int repoIssueId,
-                                   HttpSession session) {
+    public Return<Void> closeIssue(
+            @PathVariable String ownerName,
+            @PathVariable String repoName,
+            @PathVariable int repoIssueId,
+            HttpSession session) {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
         int issueId = repoIssueService.resolveIssue(ownerName, repoName, repoIssueId);
-        if (!repoService.checkUserRepoOwner(currentUserId, ownerName, repoName) &&
-                !repoService.checkCollaboratorWritePermission(ownerName, repoName, currentUserId) &&
-                !repoIssueService.checkIssueOwner(currentUserId, issueId)) {
+        if (!repoService.checkUserRepoOwner(currentUserId, ownerName, repoName) && !repoService.checkCollaboratorWritePermission(ownerName, repoName, currentUserId) && !repoIssueService.checkIssueOwner(currentUserId, issueId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
         if (!repoIssueService.checkIssueClosable(issueId)) {
@@ -88,13 +94,14 @@ public class RepoIssueController {
 
     @RequireLogin
     @PostMapping("/api/repo/{ownerName}/{repoName}/issue/{repoIssueId}/reopen")
-    public Return<Void> reopenIssue(@PathVariable String ownerName, @PathVariable String repoName, @PathVariable int repoIssueId,
-                                    HttpSession session) {
+    public Return<Void> reopenIssue(
+            @PathVariable String ownerName,
+            @PathVariable String repoName,
+            @PathVariable int repoIssueId,
+            HttpSession session) {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
         int issueId = repoIssueService.resolveIssue(ownerName, repoName, repoIssueId);
-        if (!repoService.checkUserRepoOwner(currentUserId, ownerName, repoName) &&
-                !repoService.checkCollaboratorWritePermission(ownerName, repoName, currentUserId) &&
-                !repoIssueService.checkIssueOwner(currentUserId, issueId)) {
+        if (!repoService.checkUserRepoOwner(currentUserId, ownerName, repoName) && !repoService.checkCollaboratorWritePermission(ownerName, repoName, currentUserId) && !repoIssueService.checkIssueOwner(currentUserId, issueId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
         if (!repoIssueService.checkIssueClosable(issueId)) {
@@ -103,5 +110,20 @@ public class RepoIssueController {
         repoIssueService.reopenIssue(issueId);
         return Return.OK;
     }
+
+    @RequireLogin
+    @PostMapping("/api/repo/{ownerName}/{repoName}/issue/{repoIssueId}/addComment")
+    public Return<Integer> addComment(
+            @PathVariable String ownerName,
+            @PathVariable String repoName,
+            @PathVariable int repoIssueId,
+            @RequestBody IssueContent issueContent,
+            HttpSession httpsession) {
+        int currentUserId = (int) AttributeKeys.USER_ID.getValue(httpsession);
+        var issue = repoIssueService.getIssue(ownerName, repoName, repoIssueId);
+        int contentId = repoIssueService.insertIssueContent(issue.id,currentUserId,issueContent);
+        return new Return<>(ReturnCode.OK,contentId);
+    }
+
 
 }
