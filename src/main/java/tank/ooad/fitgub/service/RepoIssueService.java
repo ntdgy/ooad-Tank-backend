@@ -1,5 +1,6 @@
 package tank.ooad.fitgub.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -7,6 +8,7 @@ import tank.ooad.fitgub.entity.repo.Issue;
 
 
 @Component
+@Slf4j
 public class RepoIssueService {
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -60,16 +62,41 @@ public class RepoIssueService {
     }
 
     public int closeIssue(String ownerName, String repoName, int issueId) {
-        return jdbcTemplate.update("""
-                update issue
-                set status = 'closed'
-                where id = (select i.id
-                            from issue i
-                                     join repo r on i.repo_id = r.id
-                            where r.name = ?
-                              and r.owner_id = (select id from users where name = ?)
-                              and i.repo_issue_id = ?);
-                """, repoName, ownerName, issueId);
+        try {
+            jdbcTemplate.update("""
+                    update issue
+                    set status = 'closed'
+                    where id = (select i.id
+                                from issue i
+                                         join repo r on i.repo_id = r.id
+                                where r.name = ?
+                                  and r.owner_id = (select id from users where name = ?)
+                                  and i.repo_issue_id = ?);
+                    """, repoName, ownerName, issueId);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return 0;
+        }
+        return 1;
+    }
+
+    public int reopenIssue(String ownerName, String repoName, int issueId) {
+        try {
+            jdbcTemplate.update("""
+                    update issue
+                    set status = 'open'
+                    where id = (select i.id
+                                from issue i
+                                         join repo r on i.repo_id = r.id
+                                where r.name = ?
+                                  and r.owner_id = (select id from users where name = ?)
+                                  and i.repo_issue_id = ?);
+                    """, repoName, ownerName, issueId);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return 0;
+        }
+        return 1;
     }
 
 

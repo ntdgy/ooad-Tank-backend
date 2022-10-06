@@ -18,8 +18,9 @@ public enum ReturnCode {
     GIT_REPO_NON_EXIST(-2002, "Git repo doesn't exists."),
     GIT_REPO_NO_PERMISSION(-2003, "no permission"),
 
-    ISSUE_NOT_FOUND(-3000, "issue not found"),
+    ISSUE_INTERNAL_ERROR(-3000, "some internal error detected, please contact admins"),
     ISSUE_CLOSED(-3001, "issue closed"),
+    ISSUE_OPENED(-3002, "issue opened"),
 
     REPO_DUPLICATED(-3000, "repo is already existed.");
     public final int code;

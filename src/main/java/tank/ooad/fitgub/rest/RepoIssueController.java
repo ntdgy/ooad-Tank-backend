@@ -51,8 +51,27 @@ public class RepoIssueController {
         if(!repoIssueService.checkIssueClosable(ownerName, repoName, repoIssueId)) {
             return new Return<>(ReturnCode.ISSUE_CLOSED);
         }
-        repoIssueService.closeIssue(ownerName, repoName, repoIssueId);
-        return new Return<>(ReturnCode.OK,repoIssueId);
+        if( repoIssueService.closeIssue(ownerName, repoName, repoIssueId)==1)
+            return new Return<>(ReturnCode.OK,repoIssueId);
+        else return new Return<>(ReturnCode.ISSUE_INTERNAL_ERROR);
+    }
+
+    @RequireLogin
+    @PostMapping("/api/repo/{ownerName}/{repoName}/issue/{repoIssueId}/reopen")
+    public Return<Integer> reopenIssue(@PathVariable String ownerName, @PathVariable String repoName, @PathVariable int repoIssueId,
+                                      HttpSession session) {
+        int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
+        if (!repoService.checkUserRepoOwner(currentUserId, ownerName, repoName) &&
+                !repoService.checkCollaboratorWritePermission(ownerName, repoName, currentUserId) &&
+                !repoIssueService.checkIssueOwner(currentUserId, ownerName, repoName, repoIssueId)) {
+            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+        }
+        if(repoIssueService.checkIssueClosable(ownerName, repoName, repoIssueId)) {
+            return new Return<>(ReturnCode.ISSUE_OPENED);
+        }
+        if( repoIssueService.reopenIssue(ownerName, repoName, repoIssueId)==1)
+            return new Return<>(ReturnCode.OK,repoIssueId);
+        else return new Return<>(ReturnCode.ISSUE_INTERNAL_ERROR);
     }
 
 
