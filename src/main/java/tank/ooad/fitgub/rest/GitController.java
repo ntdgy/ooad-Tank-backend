@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RestController;
 import tank.ooad.fitgub.entity.git.GitCommitTree;
 import tank.ooad.fitgub.entity.git.GitTreeEntry;
 import tank.ooad.fitgub.entity.repo.Repo;
-import tank.ooad.fitgub.entity.repo.RepoCollaborator;
 import tank.ooad.fitgub.git.GitOperation;
 import tank.ooad.fitgub.service.RepoService;
 import tank.ooad.fitgub.utils.AttributeKeys;
@@ -58,7 +57,7 @@ public class GitController {
         if (repo == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
 
         // checkPermission: require Read
-        if (!repoService.checkUserRepoReadPermission(ownerName, repoName, currentUserId)) {
+        if (!repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
 

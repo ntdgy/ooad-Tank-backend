@@ -29,10 +29,10 @@ public class RepoSettingsController {
 
     // Repo Settings
     @RequireLogin
-    @GetMapping("/api/repo/{repoName}/settings/collaborator")
-    public Return<List<RepoCollaborator>> listRepoCollaborators(@PathVariable String repoName, HttpSession session) {
+    @GetMapping("/api/repo/{ownerName}/{repoName}/settings/collaborator")
+    public Return<List<RepoCollaborator>> listRepoCollaborators(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
         int userId = (int) AttributeKeys.USER_ID.getValue(session);
-        if (!repoService.checkUserRepoOwner(userId, repoName)) {
+        if (!repoService.checkUserRepoOwner(userId, ownerName, repoName)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
         var cols = repoService.getRepoCollaborators(userId, repoName);
@@ -48,10 +48,10 @@ public class RepoSettingsController {
      * @return
      */
     @RequireLogin
-    @PostMapping("/api/repo/{repoName}/settings/collaborator")
-    public Return<List<RepoCollaborator>> addOrAlterCollaborators(@PathVariable String repoName, @RequestBody RepoCollaborator collaborator, HttpSession session) {
+    @PostMapping("/api/repo/{ownerName}/{repoName}/settings/collaborator")
+    public Return<List<RepoCollaborator>> addOrAlterCollaborators(@PathVariable String ownerName, @PathVariable String repoName, @RequestBody RepoCollaborator collaborator, HttpSession session) {
         int userId = (int) AttributeKeys.USER_ID.getValue(session);
-        if (!repoService.checkUserRepoOwner(userId, repoName)) {
+        if (!repoService.checkUserRepoOwner(userId, ownerName, repoName)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
         User invited = userService.findUser(collaborator.user.name, collaborator.user.email);
@@ -64,10 +64,11 @@ public class RepoSettingsController {
     }
 
     @RequireLogin
-    @PostMapping("/api/repo/{repoName}/settings/delete")
-    public Return<Void> deleteRepo(@PathVariable String repoName, HttpSession session) {
+    @PostMapping("/api/repo/{ownerName}/{repoName}/settings/delete")
+    public Return<Void> deleteRepo(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
         int userId = (int) AttributeKeys.USER_ID.getValueNonNull(session);
-        if (!repoService.checkUserRepoOwner(userId, repoName)) return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+        if (!repoService.checkUserRepoOwner(userId, ownerName, repoName))
+            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         var repo = repoService.getRepo(userId, repoName);
         try {
             gitController.deleteGitRepo(repo);

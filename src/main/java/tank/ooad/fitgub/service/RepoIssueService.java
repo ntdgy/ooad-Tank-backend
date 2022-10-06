@@ -57,11 +57,43 @@ public class RepoIssueService {
                 """, repoName);
         return issueContentService.insertIssueContent((int) issue.get("id"), (int) issue.get("next_comment_id"), IssuerId, content)
                 == 0 ? 0 : (int) issue.get("repo_issue_id");
+    }
 
+    public int closeIssue(String ownerName, String repoName, int issueId) {
+        return jdbcTemplate.update("""
+                update issue
+                set status = 'closed'
+                where id = (select i.id
+                            from issue i
+                                     join repo r on i.repo_id = r.id
+                            where r.name = ?
+                              and r.owner_id = (select id from users where name = ?)
+                              and i.repo_issue_id = ?);
+                """, repoName, ownerName, issueId);
     }
 
 
+    public boolean checkIssueOwner(int currentUserId, String ownerName, String repoName, int repoIssueId) {
+        Integer cnt = jdbcTemplate.queryForObject("""
+                select count(*)
+                from issue
+                         join repo r on issue.repo_id = r.id and r.name = ?
+                         join users uo on r.owner_id = uo.id and uo.name = ?
+                    where issue.repo_issue_id = ? and issue.issuer_user_id = ?
+                """, Integer.class, repoName, ownerName, repoIssueId, currentUserId);
+        return cnt != null && cnt > 0;
+    }
 
+    public boolean checkIssueClosable(String ownerName, String repoName, int repoIssueId) {
+        Integer cnt = jdbcTemplate.queryForObject("""
+                select count(*)
+                from issue
+                         join repo r on issue.repo_id = r.id and r.name = ?
+                         join users uo on r.owner_id = uo.id and uo.name = ?
+                    where issue.repo_issue_id = ? and issue.status = 'open'
+                """, Integer.class, repoName, ownerName, repoIssueId);
+        return cnt != null && cnt > 0;
+    }
 }
 
 

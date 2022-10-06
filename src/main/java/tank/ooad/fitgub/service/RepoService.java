@@ -4,7 +4,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import tank.ooad.fitgub.entity.repo.Repo;
 import tank.ooad.fitgub.entity.repo.RepoCollaborator;
-import tank.ooad.fitgub.git.GitOperation;
 import tank.ooad.fitgub.rest.RepoIssueController;
 
 import java.util.List;
@@ -13,11 +12,8 @@ import java.util.List;
 public class RepoService {
 
     private final JdbcTemplate template;
-    private final RepoIssueController issueController;
-
-    public RepoService(JdbcTemplate template, RepoIssueController repoIssueController) {
+    public RepoService(JdbcTemplate template) {
         this.template = template;
-        this.issueController = repoIssueController;
     }
 
     /**
@@ -29,7 +25,7 @@ public class RepoService {
      */
     public boolean checkRepoDuplicate(Repo repo, int userId) {
         int cnt = template.queryForObject("select count(*) from repo join user_repo ur on repo.id = ur.repo_id\n" +
-                                          "where repo.name = ? and ur.user_id = ?;", Integer.class, repo.name, userId);
+                "where repo.name = ? and ur.user_id = ?;", Integer.class, repo.name, userId);
         return cnt != 0;
     }
 
@@ -91,7 +87,7 @@ public class RepoService {
      *
      * @return
      */
-    public boolean checkUserRepoReadPermission(String ownerName, String repoName, int currentUserId) {
+    public boolean checkCollaboratorReadPermission(String ownerName, String repoName, int currentUserId) {
         Integer isPublic = template.queryForObject("""
                 select visible from repo join users uo on uo.id = repo.owner_id where uo.name = ? and repo.name =?;
                 """, Integer.class, ownerName, repoName);
@@ -107,7 +103,7 @@ public class RepoService {
         return cnt != null && cnt > 0;
     }
 
-    public boolean checkUserRepoWritePermission(String ownerName, String repoName, int currentUserId, int requiredPermission) {
+    public boolean checkCollaboratorWritePermission(String ownerName, String repoName, int currentUserId) {
         Integer cnt = template.queryForObject("""
                             select count(*) from repo join users uo on uo.id = repo.owner_id
                                 join user_repo ur on repo.id = ur.repo_id
@@ -118,11 +114,12 @@ public class RepoService {
     }
 
 
-    public boolean checkUserRepoOwner(int currentUserId, String repoName) {
+    public boolean checkUserRepoOwner(int currentUserId, String ownerName, String repoName) {
         Integer cnt = template.queryForObject("""
-                            select count(*) from repo where owner_id = ? and name = ?;
-                        """, Integer.class,
-                currentUserId, repoName);
+                        select count(*) from repo join users uo on uo.id = repo.owner_id
+                         where repo.owner_id = ? and uo.name = ? and repo.name = ?
+                         """, Integer.class,
+                currentUserId, ownerName, repoName);
         return cnt != null && cnt > 0;
     }
 
