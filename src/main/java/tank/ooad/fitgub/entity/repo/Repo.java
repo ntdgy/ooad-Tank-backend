@@ -4,7 +4,6 @@ package tank.ooad.fitgub.entity.repo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.jdbc.core.RowMapper;
-import org.springframework.stereotype.Component;
 import tank.ooad.fitgub.entity.user.User;
 import tank.ooad.fitgub.utils.MyConfig;
 
@@ -33,7 +32,7 @@ public class Repo {
         else visible = VISIBLE_PRIVATE;
     }
 
-    public boolean getPublic() {
+    public boolean isPublic() {
         return visible == VISIBLE_PUBLIC;
     }
 

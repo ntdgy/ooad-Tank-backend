@@ -51,6 +51,11 @@ public class RepoIssueController {
                                   @PathVariable int repoIssueId,
                                   HttpSession session) {
         // check private repo
+        var repo = repoService.getRepo(ownerName, repoName);
+        int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
+        if (!repo.isPublic() && (currentUserId == 0 || !repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
+            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+        }
         var issue = repoIssueService.getIssue(ownerName, repoName, repoIssueId);
         repoIssueService.loadContents(issue);
         return new Return<>(ReturnCode.OK, issue);

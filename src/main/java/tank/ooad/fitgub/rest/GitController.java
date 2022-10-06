@@ -57,7 +57,7 @@ public class GitController {
         if (repo == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
 
         // checkPermission: require Read
-        if (!repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId)) {
+        if (!repo.isPublic() && (currentUserId == 0 || !repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
 

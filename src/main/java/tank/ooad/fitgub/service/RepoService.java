@@ -97,12 +97,6 @@ public class RepoService {
      * @return
      */
     public boolean checkCollaboratorReadPermission(String ownerName, String repoName, int currentUserId) {
-        Integer isPublic = template.queryForObject("""
-                select visible from repo join users uo on uo.id = repo.owner_id where uo.name = ? and repo.name =?;
-                """, Integer.class, ownerName, repoName);
-        if (isPublic != null && isPublic == Repo.VISIBLE_PUBLIC) {
-            return true;
-        }
         Integer cnt = template.queryForObject("""
                             select count(*) from repo join users uo on uo.id = repo.owner_id
                                 join user_repo ur on repo.id = ur.repo_id
