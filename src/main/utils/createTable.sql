@@ -46,8 +46,9 @@ create table repo_perm_invite
     create_time int8 not null default (extract(epoch from now()) * 1000)
 );
 
+
 drop table if exists issue cascade;
-drop table if exists issue_comment;
+drop table if exists issue_content cascade;
 create table issue
 (
     id              serial primary key,
@@ -62,7 +63,7 @@ create table issue
     unique (repo_id, repo_issue_id)
 );
 create index on issue (repo_id, issuer_user_id);
-create table issue_comment
+create table issue_content
 (
     id             serial primary key,
     issue_id       integer                not null references issue (id),
@@ -72,4 +73,4 @@ create table issue_comment
     content        text                   not null,
     unique (issue_id, comment_id)
 );
-create index on issue_comment (issue_id, sender_user_id);
+create index on issue_content (issue_id, sender_user_id);

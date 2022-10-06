@@ -1,9 +1,8 @@
 package tank.ooad.fitgub.rest;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import tank.ooad.fitgub.entity.repo.Issue;
 import tank.ooad.fitgub.service.RepoIssueService;
 import tank.ooad.fitgub.utils.AttributeKeys;
 import tank.ooad.fitgub.utils.Return;
@@ -11,6 +10,7 @@ import tank.ooad.fitgub.utils.ReturnCode;
 import tank.ooad.fitgub.utils.permission.RequireLogin;
 
 import javax.servlet.http.HttpSession;
+import javax.validation.OverridesAttribute;
 
 @RestController
 public class RepoIssueController {
@@ -18,7 +18,30 @@ public class RepoIssueController {
     @Autowired
     private RepoIssueService repoIssueService;
 
+    @RequireLogin
+    @PostMapping("/api/repo/{ownerName}/{repoName}/issue/create")
+    public Return<Void> createIssue(@PathVariable String ownerName, @PathVariable String repoName,
+                                    @RequestBody Issue issue,
+                                    HttpSession session) {
+        int userId = (int) AttributeKeys.USER_ID.getValue(session);
+        StringBuilder sb = new StringBuilder();
+        for (String s : issue.tag) {
+            sb.append(s);
+            sb.append(',');
+        }
+        sb.deleteCharAt(sb.length() - 1);
+        int id = repoIssueService.createIssue(ownerName,repoName,issue.title,userId,sb.toString(),issue.initial_content.content);
 
 
+    }
 
+    @GetMapping("/api/repo/{ownerName}/{repoName}/issue/{repoIssueId}")
+    public Return<Void> getIssueContent(@PathVariable String ownerName,
+                                        @PathVariable String repoName,
+                                        @PathVariable int repoIssueId,
+                                        HttpSession session) {
+        int userId = (int) AttributeKeys.USER_ID.getValue(session);
+        //int id = repoIssueService.createIssue(ownerName, repoName, issue.title, userId, issue.tag);
+
+    }
 }
