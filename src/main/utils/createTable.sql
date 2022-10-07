@@ -74,3 +74,23 @@ create table issue_content
     unique (issue_id, comment_id)
 );
 create index on issue_content (issue_id, sender_user_id);
+
+
+drop table if exists pull_requests cascade;
+create table pull_requests
+(
+    id              serial primary key,
+    from_repo_id    integer                                                       not null references repo (id) on delete cascade on update cascade,
+    to_repo_id      integer                                                       not null references repo (id) on delete cascade on update cascade,
+    from_branch     text                                                          not null,
+    to_branch       text                                                          not null,
+    repo_pr_id      integer                                                       not null,
+    prer_user_id  integer                                                       not null references users (id) on delete cascade on update cascade,
+    next_comment_id integer default 1                                             not null,
+    title           text                                                          not null,
+    status          text    default 'open'                                        not null,
+    tag             text    default null,
+    created_at      bigint  default (EXTRACT(epoch FROM now()) * (1000)::numeric) not null,
+    unique (to_repo_id, repo_pr_id)
+);
+create index on pull_requests (from_repo_id, prer_user_id);
