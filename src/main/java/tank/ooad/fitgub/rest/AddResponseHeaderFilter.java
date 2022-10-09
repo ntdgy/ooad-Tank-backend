@@ -18,7 +18,11 @@ public class AddResponseHeaderFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse,
                                     FilterChain filterChain) throws ServletException, IOException {
-        httpServletResponse.addHeader("Access-Control-Allow-Origin","*");
+        httpServletResponse.addHeader("Access-Control-Allow-Origin", "*");
+        httpServletResponse.addHeader("Access-Control-Allow-Credentials", "true");
+        httpServletResponse.addHeader("Access-Control-Allow-Methods", "*");
+        httpServletResponse.addHeader("Access-Control-Allow-Headers", "*");
+
         filterChain.doFilter(httpServletRequest, httpServletResponse);
     }
 }
