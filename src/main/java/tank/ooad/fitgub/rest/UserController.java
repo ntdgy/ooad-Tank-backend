@@ -13,6 +13,8 @@ import tank.ooad.fitgub.utils.Return;
 import tank.ooad.fitgub.utils.ReturnCode;
 import tank.ooad.fitgub.utils.permission.RequireLogin;
 
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 @Slf4j
@@ -26,7 +28,7 @@ public class UserController {
     private UserService userService;
 
     @PostMapping("/api/user/login")
-    public Return<Void> login(@RequestBody User login, HttpSession session) {
+    public Return<Void> login(HttpServletResponse response, @RequestBody User login, HttpSession session) {
         if ((int) AttributeKeys.USER_ID.getValue(session) != 0) return new Return<>(ReturnCode.USER_ALREADY_LOGIN);
 
         log.info(Crypto.hashPassword(login.password));
@@ -34,6 +36,8 @@ public class UserController {
         int valid = userService.validateUser(login.name, login.email, login.password);
         if (valid == 0) return new Return<>(ReturnCode.USER_AUTH_FAILED);
         AttributeKeys.USER_ID.setValue(session, valid);
+        response.addCookie(new Cookie("SameSite", "None"));
+        response.addCookie(new Cookie("Secure", ""));
         return Return.OK;
     }
 
