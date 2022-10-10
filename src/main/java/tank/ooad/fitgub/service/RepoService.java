@@ -188,4 +188,12 @@ public class RepoService {
                 ownerName, repoName
         );
     }
+
+    public void setPublic(Repo repo) {
+        template.update("update repo set visible = ? where id = ?", Repo.VISIBLE_PUBLIC, repo.id);
+    }
+
+    public void setPrivate(Repo repo) {
+        template.update("update repo set visible = ? where id = ?", Repo.VISIBLE_PRIVATE, repo.id);
+    }
 }

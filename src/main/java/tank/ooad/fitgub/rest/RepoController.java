@@ -55,4 +55,30 @@ public class RepoController {
         var lst = repoService.getUserPublicRepos(username);
         return new Return<>(ReturnCode.OK, lst);
     }
+
+    @RequireLogin
+    @GetMapping("/api/repo/{ownerName}/{repoName}/setPublic")
+    public Return<Void> setPublic(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
+        System.out.println("setPublic");
+        int userId = (int) AttributeKeys.USER_ID.getValueNonNull(session);
+        var repo = repoService.getRepo(ownerName, repoName);
+        if (repo == null) return new Return<>(ReturnCode.REPO_NON_EXIST);
+        if (repo.owner.id != userId) return new Return<>(ReturnCode.REPO_NO_PERMISSION);
+        if (repo.isPublic()) return new Return<>(ReturnCode.REPO_ALREADY_PUBLIC);
+        repoService.setPublic(repo);
+        return Return.OK;
+    }
+
+    @RequireLogin
+    @GetMapping("/api/repo/{ownerName}/{repoName}/setPrivate")
+    public Return<Void> setPrivate(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
+        System.out.println("setPrivate");
+        int userId = (int) AttributeKeys.USER_ID.getValueNonNull(session);
+        var repo = repoService.getRepo(ownerName, repoName);
+        if (repo == null) return new Return<>(ReturnCode.REPO_NON_EXIST);
+        if (repo.owner.id != userId) return new Return<>(ReturnCode.REPO_NO_PERMISSION);
+        if (!repo.isPublic()) return new Return<>(ReturnCode.REPO_ALREADY_PRIVATE);
+        repoService.setPrivate(repo);
+        return Return.OK;
+    }
 }

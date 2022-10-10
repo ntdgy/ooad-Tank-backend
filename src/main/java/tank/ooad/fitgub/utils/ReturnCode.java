@@ -22,7 +22,13 @@ public enum ReturnCode {
     ISSUE_CLOSED(-3001, "issue closed"),
     ISSUE_OPENED(-3002, "issue opened"),
 
-    REPO_DUPLICATED(-3000, "repo is already existed.");
+    REPO_DUPLICATED(-3000, "repo is already existed."),
+    REPO_NON_EXIST(-3001, "repo is not existed."),
+    REPO_NO_PERMISSION(-3002, "no permission"),
+    REPO_ALREADY_PUBLIC(-3003, "repo is already public"),
+    REPO_ALREADY_PRIVATE(-3004, "repo is already private");
+
+
     public final int code;
     public final String message;
 
