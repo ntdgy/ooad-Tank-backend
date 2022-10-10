@@ -13,6 +13,7 @@ import tank.ooad.fitgub.utils.Return;
 import tank.ooad.fitgub.utils.ReturnCode;
 
 import javax.servlet.http.HttpSession;
+import java.io.IOException;
 import java.util.List;
 
 @Component
@@ -37,7 +38,7 @@ public class GitController {
      */
     @GetMapping("/api/git/{ownerName}/{repoName}")
     public Return<GitRepo> getCommitAndTree(@PathVariable String ownerName, @PathVariable String repoName,
-                                            HttpSession session) {
+                                            HttpSession session) throws IOException {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
 
         // Resolve Repo
@@ -49,7 +50,7 @@ public class GitController {
                 && !(repo.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
-        return new Return<>(ReturnCode.NOT_IMPLEMENTED);
+        return new Return<>(ReturnCode.OK, gitOperation.getGitRepo(repo));
 //        return Return.OK;
     }
 

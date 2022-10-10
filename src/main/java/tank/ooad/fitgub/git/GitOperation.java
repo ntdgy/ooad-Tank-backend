@@ -2,12 +2,16 @@ package tank.ooad.fitgub.git;
 
 import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.eclipse.jgit.internal.storage.file.FileRepository;
+import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.springframework.stereotype.Component;
+import tank.ooad.fitgub.entity.git.GitCommit;
+import tank.ooad.fitgub.entity.git.GitPerson;
+import tank.ooad.fitgub.entity.git.GitRepo;
 import tank.ooad.fitgub.entity.git.GitTreeEntry;
 import tank.ooad.fitgub.entity.repo.Repo;
 
@@ -43,6 +47,29 @@ public class GitOperation {
     public Repository getRepository(Repo repo) throws IOException {
         File repoPath = new File(REPO_STORE_PATH, String.format("%s/%s", repo.owner.id, repo.id));
         return new FileRepository(repoPath);
+    }
+
+    public GitRepo getGitRepo(Repo repo) throws IOException {
+        GitRepo gitRepo = new GitRepo();
+        Repository repository = getRepository(repo);
+        gitRepo.default_branch = repository.getBranch();
+        gitRepo.branches = repository.getRefDatabase().getRefsByPrefix("refs/heads/").stream().map(Ref::getName).toList();
+        gitRepo.tags = repository.getRefDatabase().getRefsByPrefix("refs/tags/").stream().map(Ref::getName).toList();
+        var HEAD = repository.exactRef("HEAD");
+        var commit = repository.parseCommit(HEAD.getObjectId());
+        gitRepo.head = new GitCommit();
+        gitRepo.head.commit_hash = commit.getName();
+        gitRepo.head.commit_message = commit.getFullMessage();
+        gitRepo.head.commit_time = commit.getCommitterIdent().getWhen().toString();
+        gitRepo.head.author = new GitPerson();
+        var author = commit.getAuthorIdent();
+        gitRepo.head.author.name = author.getName();
+        gitRepo.head.author.email = author.getEmailAddress();
+        gitRepo.head.committer = new GitPerson();
+        var committer = commit.getCommitterIdent();
+        gitRepo.head.committer.name = committer.getName();
+        gitRepo.head.committer.email = committer.getEmailAddress();
+        return gitRepo;
     }
 
     public List<GitTreeEntry> readGitTree(Repo repo,
