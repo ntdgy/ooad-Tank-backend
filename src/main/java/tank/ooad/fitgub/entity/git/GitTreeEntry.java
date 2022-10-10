@@ -1,17 +1,15 @@
 package tank.ooad.fitgub.entity.git;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class GitTreeEntry {
     public String name;
-    public String hash;
-    public boolean isFolder;
-
-    public GitTreeEntry() {
-
+    @JsonProperty
+    public boolean isFolder(){
+        return name.endsWith("/");
     }
 
-    public GitTreeEntry(String name, String hash, boolean isFolder) {
+    public GitTreeEntry(String name) {
         this.name = name;
-        this.hash = hash;
-        this.isFolder = isFolder;
     }
 }
