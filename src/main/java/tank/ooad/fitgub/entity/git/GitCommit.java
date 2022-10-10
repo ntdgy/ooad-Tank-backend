@@ -8,5 +8,5 @@ public class GitCommit {
     public String commit_message;
     public GitPerson committer;
     public GitPerson author;
-    public String commit_time;
+    public long commit_time;
 }

@@ -60,7 +60,7 @@ public class GitOperation {
         gitRepo.head = new GitCommit();
         gitRepo.head.commit_hash = commit.getName();
         gitRepo.head.commit_message = commit.getFullMessage();
-        gitRepo.head.commit_time = commit.getCommitterIdent().getWhen().toString();
+        gitRepo.head.commit_time = commit.getCommitterIdent().getWhen().getTime();
         gitRepo.head.author = new GitPerson();
         var author = commit.getAuthorIdent();
         gitRepo.head.author.name = author.getName();
