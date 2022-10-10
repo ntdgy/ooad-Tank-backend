@@ -59,8 +59,6 @@ public class GitController {
                                               @PathVariable String ref,
                                               @PathVariable String path,
                                               HttpSession session) {
-        log.info(ref);
-        log.info(path);
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
         Repo repository = repoService.getRepo(ownerName, repoName);
         if (repository == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
@@ -78,11 +76,27 @@ public class GitController {
         }
     }
 
-    @GetMapping("/api/git/{ownerName}/{repoName}/blob/{ref}/{path}")
-    public Return<String> getBlob(@PathVariable String ownerName, @PathVariable String repoName,
-                                  @PathVariable String ref, @RequestParam String path, HttpSession session) {
-        return new Return<>(ReturnCode.NOT_IMPLEMENTED);
+    @GetMapping("/api/git/{ownerName}/{repoName}/blob/{ref}/{*path}")
+    public Return<String> getBlob(@PathVariable String ownerName,
+                                  @PathVariable String repoName,
+                                  @PathVariable String ref,
+                                  @PathVariable String path,
+                                  HttpSession session) {
+        int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
+        Repo repository = repoService.getRepo(ownerName, repoName);
+        if (repository == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
+        if (!repository.isPublic() && currentUserId != 0
+                && !(repository.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
+            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+        }
+        try {
+            var content = gitOperation.readGitBlob(repository, ref, path);
+            return new Return<>(ReturnCode.OK, content);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            throw new RuntimeException(e);
+        }
+
+
     }
-
-
 }

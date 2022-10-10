@@ -51,12 +51,9 @@ public class GitOperation {
         Repository repository = getRepository(repo);
         var head = repository.resolve(Ref);
         RevWalk walk = new RevWalk(repository);
-        System.out.println(head);
         RevCommit commit = walk.parseCommit(head);
         RevTree tree = commit.getTree();
         List<GitTreeEntry> files = new ArrayList<>();
-
-
         var prefix = path.split("/");
         if (prefix.length == 0) prefix = new String[]{""};
         int len = 1;
@@ -68,13 +65,10 @@ public class GitOperation {
             len++;
             while (treeWalk.next()) {
                 if (treeWalk.isSubtree() && treeWalk.getNameString().equals(prefix[len - 1])) {
-                    System.out.println("Enter: " + treeWalk.getNameString());
                     treeWalk.enterSubtree();
                     continue a;
                 }
             }
-            System.out.println("failed!");
-            System.exit(2);
         }
         while (treeWalk.next() && treeWalk.getDepth() == len - 1) {
             if (treeWalk.isSubtree()) {
@@ -83,7 +77,37 @@ public class GitOperation {
                 files.add(new GitTreeEntry(treeWalk.getNameString()));
         }
         treeWalk.close();
-        System.out.println(files);
         return files;
+    }
+
+    public String readGitBlob(Repo repo, String ref, String path) throws IOException {
+        Repository repository = getRepository(repo);
+        var head = repository.resolve(ref);
+        RevWalk walk = new RevWalk(repository);
+        RevCommit commit = walk.parseCommit(head);
+        RevTree tree = commit.getTree();
+        TreeWalk treeWalk = new TreeWalk(repository);
+        treeWalk.addTree(tree);
+        treeWalk.setRecursive(false);
+        var prefix = path.split("/");
+        int len = 1;
+        a:
+        while (len < prefix.length - 1) {
+            len++;
+            while (treeWalk.next()) {
+                if (treeWalk.isSubtree() && treeWalk.getNameString().equals(prefix[len - 1])) {
+                    treeWalk.enterSubtree();
+                    continue a;
+                }
+            }
+        }
+        while (treeWalk.next() && treeWalk.getDepth() == len - 1) {
+            if (treeWalk.getNameString().equals(prefix[len])) {
+                var blob = treeWalk.getObjectId(0);
+                var loader = repository.open(blob);
+                return new String(loader.getBytes());
+            }
+        }
+        return null;
     }
 }
