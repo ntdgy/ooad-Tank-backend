@@ -36,8 +36,6 @@ public class UserController {
         int valid = userService.validateUser(login.name, login.email, login.password);
         if (valid == 0) return new Return<>(ReturnCode.USER_AUTH_FAILED);
         AttributeKeys.USER_ID.setValue(session, valid);
-        response.addCookie(new Cookie("SameSite", "None"));
-        response.addCookie(new Cookie("Secure", ""));
         return Return.OK;
     }
 

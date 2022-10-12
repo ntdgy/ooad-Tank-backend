@@ -12,7 +12,7 @@ import java.io.IOException;
 
 //仅限生产环境
 // TODO: delete this file before launch
-@Component
+//@Component
 public class AddResponseHeaderFilter extends OncePerRequestFilter {
 
     @Override
