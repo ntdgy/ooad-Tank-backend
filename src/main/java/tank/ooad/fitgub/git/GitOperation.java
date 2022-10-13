@@ -1,7 +1,10 @@
 package tank.ooad.fitgub.git;
 
+import cn.hutool.core.io.CharsetDetector;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.eclipse.jgit.internal.storage.file.FileRepository;
+import org.eclipse.jgit.lib.ObjectLoader;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -9,14 +12,12 @@ import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.springframework.stereotype.Component;
-import tank.ooad.fitgub.entity.git.GitCommit;
-import tank.ooad.fitgub.entity.git.GitPerson;
-import tank.ooad.fitgub.entity.git.GitRepo;
-import tank.ooad.fitgub.entity.git.GitTreeEntry;
+import tank.ooad.fitgub.entity.git.*;
 import tank.ooad.fitgub.entity.repo.Repo;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -53,11 +54,11 @@ public class GitOperation {
         GitRepo gitRepo = new GitRepo();
         Repository repository = getRepository(repo);
         gitRepo.default_branch = repository.getBranch();
-        gitRepo.branches = repository.getRefDatabase().getRefsByPrefix("refs/heads/").stream().map(Ref::getName).toList();
-        gitRepo.tags = repository.getRefDatabase().getRefsByPrefix("refs/tags/").stream().map(Ref::getName).toList();
-        var HEAD = repository.exactRef("HEAD");
-        if (HEAD.getObjectId() != null) {
-            var commit = repository.parseCommit(HEAD.getObjectId());
+        gitRepo.branches = repository.getRefDatabase().getRefsByPrefix("refs/heads/").stream().map(Ref::getName).map((str) -> StringUtils.removeStart(str, "refs/heads/")).toList();
+        gitRepo.tags = repository.getRefDatabase().getRefsByPrefix("refs/tags/").stream().map(Ref::getName).map((str) -> StringUtils.removeStart(str, "refs/tags/")).toList();
+        var HEAD = repository.resolve(gitRepo.default_branch);
+        if (HEAD != null) {
+            var commit = repository.parseCommit(HEAD);
             gitRepo.head = new GitCommit();
             gitRepo.head.commit_hash = commit.getName();
             gitRepo.head.commit_message = commit.getFullMessage();
@@ -110,7 +111,21 @@ public class GitOperation {
         return files;
     }
 
-    public String readGitBlob(Repo repo, String ref, String path) throws IOException {
+    public GitBlob readTextGitBlob(Repo repo, String ref, String path) throws IOException {
+        var loader = getGitBlobLoader(repo, ref, path);
+        if (loader == null) return null;
+        var istream = loader.openStream();
+        var chars = CharsetDetector.detect(32768, istream, null);
+        istream.reset();
+        var blob = new GitBlob();
+        blob.isText = chars != null;
+        if (blob.isText)
+            blob.content = new String(istream.readAllBytes());
+        istream.close();
+        return blob;
+    }
+
+    public ObjectLoader getGitBlobLoader(Repo repo, String ref, String path) throws IOException {
         Repository repository = getRepository(repo);
         var head = repository.resolve(ref);
         RevWalk walk = new RevWalk(repository);
@@ -134,8 +149,7 @@ public class GitOperation {
         while (treeWalk.next() && treeWalk.getDepth() == len - 1) {
             if (treeWalk.getNameString().equals(prefix[len])) {
                 var blob = treeWalk.getObjectId(0);
-                var loader = repository.open(blob);
-                return new String(loader.getBytes());
+                return repository.open(blob);
             }
         }
         return null;
