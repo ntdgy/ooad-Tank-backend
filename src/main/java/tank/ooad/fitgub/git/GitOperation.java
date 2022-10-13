@@ -56,19 +56,21 @@ public class GitOperation {
         gitRepo.branches = repository.getRefDatabase().getRefsByPrefix("refs/heads/").stream().map(Ref::getName).toList();
         gitRepo.tags = repository.getRefDatabase().getRefsByPrefix("refs/tags/").stream().map(Ref::getName).toList();
         var HEAD = repository.exactRef("HEAD");
-        var commit = repository.parseCommit(HEAD.getObjectId());
-        gitRepo.head = new GitCommit();
-        gitRepo.head.commit_hash = commit.getName();
-        gitRepo.head.commit_message = commit.getFullMessage();
-        gitRepo.head.commit_time = commit.getCommitterIdent().getWhen().getTime();
-        gitRepo.head.author = new GitPerson();
-        var author = commit.getAuthorIdent();
-        gitRepo.head.author.name = author.getName();
-        gitRepo.head.author.email = author.getEmailAddress();
-        gitRepo.head.committer = new GitPerson();
-        var committer = commit.getCommitterIdent();
-        gitRepo.head.committer.name = committer.getName();
-        gitRepo.head.committer.email = committer.getEmailAddress();
+        if (HEAD.getObjectId() != null) {
+            var commit = repository.parseCommit(HEAD.getObjectId());
+            gitRepo.head = new GitCommit();
+            gitRepo.head.commit_hash = commit.getName();
+            gitRepo.head.commit_message = commit.getFullMessage();
+            gitRepo.head.commit_time = commit.getCommitterIdent().getWhen().getTime();
+            gitRepo.head.author = new GitPerson();
+            var author = commit.getAuthorIdent();
+            gitRepo.head.author.name = author.getName();
+            gitRepo.head.author.email = author.getEmailAddress();
+            gitRepo.head.committer = new GitPerson();
+            var committer = commit.getCommitterIdent();
+            gitRepo.head.committer.name = committer.getName();
+            gitRepo.head.committer.email = committer.getEmailAddress();
+        }
         return gitRepo;
     }
 
@@ -77,6 +79,7 @@ public class GitOperation {
                                           String path) throws IOException {
         Repository repository = getRepository(repo);
         var head = repository.resolve(Ref);
+        if (head == null) return List.of();
         RevWalk walk = new RevWalk(repository);
         RevCommit commit = walk.parseCommit(head);
         RevTree tree = commit.getTree();
