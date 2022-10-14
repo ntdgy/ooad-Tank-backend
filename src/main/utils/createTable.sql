@@ -32,12 +32,14 @@ comment on column user_info.url is 'user homepage url';
 create table repo
 (
     id            serial
-        constraint repo_pkey
-            primary key,
+        primary key,
     name          varchar           not null,
     visible       integer default 0 not null,
-    next_issue_id integer default 1 not null,
+    next_issue_id integer default 0 not null,
     owner_id      integer           not null,
+    stars         integer default 0 not null,
+    watchs        integer default 0 not null,
+    forks         integer default 0 not null,
     constraint repo_pk
         unique (owner_id, name)
 );
@@ -77,6 +79,26 @@ create table repo_perm_invite
         constraint repo_perm_invite_repo_id_fkey
             references repo,
     create_time bigint default (EXTRACT(epoch FROM now()) * (1000)::numeric) not null
+);
+
+
+create table star
+(
+    user_id int not null,
+    repo_id int not null,
+    primary key (user_id, repo_id)
+);
+create table watch
+(
+    user_id int not null,
+    repo_id int not null,
+    primary key (user_id, repo_id)
+);
+create table fork_from
+(
+    repo_id int references repo (id) not null,
+    fork_id int references repo (id) not null,
+    primary key (repo_id, fork_id)
 );
 
 create table issue
