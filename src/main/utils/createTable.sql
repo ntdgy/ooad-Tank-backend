@@ -1,96 +1,152 @@
-drop table if exists users cascade;
-drop table if exists user_info cascade;
-drop table if exists repo cascade;
-drop table if exists user_repo cascade;
+-- drop table user_repo cascade;
 
 create table users
 (
-    id       serial primary key,
-    name     varchar(20) unique not null,
-    password varchar            not null,
-    email    varchar            not null
+    id       serial
+        constraint users_pkey
+            primary key,
+    name     varchar(20) not null
+        constraint users_name_key
+            unique,
+    password varchar     not null,
+    email    varchar     not null
 );
 
 create table user_info
 (
-    user_id      int primary key references users (id),
-    display_name varchar not null,
-    bio          varchar not null default '',
-    create_time  int8    not null default (extract(epoch from now()) * 1000)
+    user_id      integer                                                       not null
+        constraint user_info_pkey
+            primary key
+        constraint user_info_user_id_fkey
+            references users,
+    display_name varchar                                                       not null,
+    bio          varchar default ''::character varying                         not null,
+    create_time  bigint  default (EXTRACT(epoch FROM now()) * (1000)::numeric) not null,
+    url          text,
+    avatar       text,
+    github       text
 );
+
+comment on column user_info.url is 'user homepage url';
 
 create table repo
 (
-    id       serial primary key,
-    name     varchar not null,
-    visible  int     not null default (0),
-    owner_id int     not null references users (id)
+    id            serial
+        constraint repo_pkey
+            primary key,
+    name          varchar           not null,
+    visible       integer default 0 not null,
+    next_issue_id integer default 1 not null,
+    owner_id      integer           not null,
+    constraint repo_pk
+        unique (owner_id, name)
 );
 
 create table user_repo
 (
-    user_id    int not null references users (id),
-    repo_id    int not null references repo (id) on delete cascade,
-    permission int not null default (0),
-    unique (user_id, repo_id)
+    user_id    integer           not null
+        constraint user_repo_user_id_fkey
+            references users,
+    repo_id    integer           not null
+        constraint user_repo_repo_id_fkey
+            references repo
+            on delete cascade,
+    permission integer default 0 not null,
+    constraint user_repo_user_id_repo_id_key
+        unique (user_id, repo_id)
 );
-create index on user_repo (user_id);
-create index on user_repo (repo_id);
+
+create index user_repo_user_id_idx
+    on user_repo (user_id);
+
+create index user_repo_repo_id_idx
+    on user_repo (repo_id);
 
 create table repo_perm_invite
 (
-    id          serial primary key,
-    inviter     int  not null references users (id),
-    invited     int  not null references users (id),
-    repo_id     int  not null references repo (id),
-    create_time int8 not null default (extract(epoch from now()) * 1000)
+    id          serial
+        constraint repo_perm_invite_pkey
+            primary key,
+    inviter     integer                                                      not null
+        constraint repo_perm_invite_inviter_fkey
+            references users,
+    invited     integer                                                      not null
+        constraint repo_perm_invite_invited_fkey
+            references users,
+    repo_id     integer                                                      not null
+        constraint repo_perm_invite_repo_id_fkey
+            references repo,
+    create_time bigint default (EXTRACT(epoch FROM now()) * (1000)::numeric) not null
 );
 
-
-drop table if exists issue cascade;
-drop table if exists issue_content cascade;
 create table issue
 (
-    id              serial primary key,
-    repo_id         integer                                                       not null references repo (id) on delete cascade on update cascade,
+    id              serial
+        constraint issue_pkey
+            primary key,
+    repo_id         integer                                                       not null
+        constraint issue_repo_id_fkey
+            references repo
+            on update cascade on delete cascade,
     repo_issue_id   integer                                                       not null,
-    issuer_user_id  integer                                                       not null references users (id) on delete cascade on update cascade,
+    issuer_user_id  integer                                                       not null
+        constraint issue_issuer_user_id_fkey
+            references users
+            on update cascade on delete cascade,
     next_comment_id integer default 1                                             not null,
     title           text                                                          not null,
-    status          text    default 'open'                                        not null,
-    tag             text    default null,
+    status          text    default 'open'::text                                  not null,
+    tag             text    default ''::text,
     created_at      bigint  default (EXTRACT(epoch FROM now()) * (1000)::numeric) not null,
-    unique (repo_id, repo_issue_id)
+    constraint issue_repo_id_repo_issue_id_key
+        unique (repo_id, repo_issue_id)
 );
-create index on issue (repo_id, issuer_user_id);
+
 create table issue_content
 (
-    id             serial primary key,
-    issue_id       integer                not null references issue (id),
-    comment_id     int                    not null,
-    sender_user_id integer                not null references users (id),
-    type           text default 'comment' not null,
-    content        text                   not null,
-    unique (issue_id, comment_id)
+    id             serial
+        constraint issue_content_pkey
+            primary key,
+    issue_id       integer                      not null
+        constraint issue_content_issue_id_fkey
+            references issue,
+    comment_id     integer                      not null,
+    sender_user_id integer                      not null
+        constraint issue_content_sender_user_id_fkey
+            references users,
+    type           text default 'comment'::text not null,
+    content        text                         not null,
+    constraint issue_content_issue_id_comment_id_key
+        unique (issue_id, comment_id)
 );
-create index on issue_content (issue_id, sender_user_id);
 
-
-drop table if exists pull_requests cascade;
 create table pull_requests
 (
-    id              serial primary key,
-    from_repo_id    integer                                                       not null references repo (id) on delete cascade on update cascade,
-    to_repo_id      integer                                                       not null references repo (id) on delete cascade on update cascade,
+    id              serial
+        constraint pull_requests_pkey
+            primary key,
+    from_repo_id    integer                                                       not null
+        constraint pull_requests_from_repo_id_fkey
+            references repo
+            on update cascade on delete cascade,
+    to_repo_id      integer                                                       not null
+        constraint pull_requests_to_repo_id_fkey
+            references repo
+            on update cascade on delete cascade,
     from_branch     text                                                          not null,
     to_branch       text                                                          not null,
     repo_pr_id      integer                                                       not null,
-    prer_user_id  integer                                                       not null references users (id) on delete cascade on update cascade,
+    prer_user_id    integer                                                       not null
+        constraint pull_requests_prer_user_id_fkey
+            references users
+            on update cascade on delete cascade,
     next_comment_id integer default 1                                             not null,
     title           text                                                          not null,
-    status          text    default 'open'                                        not null,
-    tag             text    default null,
+    status          text    default 'open'::text                                  not null,
+    tag             text,
     created_at      bigint  default (EXTRACT(epoch FROM now()) * (1000)::numeric) not null,
-    unique (to_repo_id, repo_pr_id)
+    constraint pull_requests_to_repo_id_repo_pr_id_key
+        unique (to_repo_id, repo_pr_id)
 );
-create index on pull_requests (from_repo_id, prer_user_id);
+
+
