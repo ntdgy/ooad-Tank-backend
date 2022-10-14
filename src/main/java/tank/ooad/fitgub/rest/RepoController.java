@@ -3,7 +3,6 @@ package tank.ooad.fitgub.rest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import tank.ooad.fitgub.entity.repo.Repo;
-import tank.ooad.fitgub.entity.repo.RepoCollaborator;
 import tank.ooad.fitgub.entity.repo.RepoMetaData;
 import tank.ooad.fitgub.git.GitOperation;
 import tank.ooad.fitgub.service.RepoService;
@@ -47,10 +46,9 @@ public class RepoController {
 
     @RequireLogin
     @GetMapping("/api/repo/list_self")
-    public Return<List<Repo>> listMyRepo(HttpSession session, @RequestParam Optional<String> permission) {
+    public Return<List<Repo>> listMyRepo(HttpSession session) {
         int userId = (int) AttributeKeys.USER_ID.getValueNonNull(session);
-        var lst = repoService.getUserRepos(userId);
-        return new Return<>(ReturnCode.OK, lst);
+        return new Return<>(ReturnCode.OK, repoService.getUserRepos(userId));
     }
 
     @GetMapping("/api/repo/list_pub/{username}")
@@ -64,11 +62,11 @@ public class RepoController {
     public Return<Void> setPublic(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
         System.out.println("setPublic");
         int userId = (int) AttributeKeys.USER_ID.getValueNonNull(session);
-        var repo = repoService.getRepo(ownerName, repoName);
-        if (repo == null) return new Return<>(ReturnCode.REPO_NON_EXIST);
-        if (repo.owner.id != userId) return new Return<>(ReturnCode.REPO_NO_PERMISSION);
-        if (repo.isPublic()) return new Return<>(ReturnCode.REPO_ALREADY_PUBLIC);
-        repoService.setPublic(repo);
+        var repoId = repoService.resolveRepo(ownerName, repoName);
+        if (!repoService.checkRepoOwnerPermission(userId, ownerName, repoName)) {
+            return new Return<>(ReturnCode.REPO_NO_PERMISSION);
+        }
+        repoService.setPublic(repoId);
         return Return.OK;
     }
 
@@ -77,31 +75,22 @@ public class RepoController {
     public Return<Void> setPrivate(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
         System.out.println("setPrivate");
         int userId = (int) AttributeKeys.USER_ID.getValueNonNull(session);
-        var repo = repoService.getRepo(ownerName, repoName);
-        if (repo == null) return new Return<>(ReturnCode.REPO_NON_EXIST);
-        if (repo.owner.id != userId) return new Return<>(ReturnCode.REPO_NO_PERMISSION);
-        if (!repo.isPublic()) return new Return<>(ReturnCode.REPO_ALREADY_PRIVATE);
-        repoService.setPrivate(repo);
+        var repoId = repoService.resolveRepo(ownerName, repoName);
+        if (!repoService.checkRepoOwnerPermission(userId, ownerName, repoName)) {
+            return new Return<>(ReturnCode.REPO_NO_PERMISSION);
+        }
+        repoService.setPrivate(repoId);
         return Return.OK;
     }
 
     @GetMapping("/api/repo/{ownerName}/{repoName}/metaData")
     public Return<RepoMetaData> getRepoMetaData(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
-        Repo repository = repoService.getRepo(ownerName, repoName);
-        if (repository == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
-        if (!repository.isPublic() && currentUserId != 0
-                && !(repository.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
+        Repo repo = repoService.getRepo(ownerName, repoName);
+        if (!repoService.checkRepoReadPermission(repo, currentUserId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
-        var repoMetaData = repoService.getRepoMetaData(repository);
-        repoMetaData.owner = repository.owner;
-        repoMetaData.name = repository.name;
-        var forkedData = repoService.getForkedRepoNames(repository);
-        if(!forkedData.isEmpty()) {
-            repoMetaData.fork_from_name = forkedData.get(0);
-            repoMetaData.fork_from_owner = forkedData.get(1);
-        }
+        var repoMetaData = repoService.getRepoMetaData(repo);
         return new Return<>(ReturnCode.OK, repoMetaData);
     }
 
@@ -109,13 +98,11 @@ public class RepoController {
     @GetMapping("/api/repo/{ownerName}/{repoName}/action/star")
     public Return<Integer> starRepo(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
-        Repo repository = repoService.getRepo(ownerName, repoName);
-        if (repository == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
-        if (!repository.isPublic() && currentUserId != 0
-                && !(repository.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
+        Repo repo = repoService.getRepo(ownerName, repoName);
+        if (!repoService.checkRepoReadPermission(repo, currentUserId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
-        var stars = repoService.starRepo(currentUserId,repository.id);
+        var stars = repoService.starRepo(currentUserId, repo.id);
         if (stars == -1) return new Return<>(ReturnCode.REPO_ALREADY_STARRED);
         return new Return<>(ReturnCode.OK, stars);
     }
@@ -127,14 +114,13 @@ public class RepoController {
         Repo repository = repoService.getRepo(ownerName, repoName);
         if (repository == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
         if (!repository.isPublic() && currentUserId != 0
-                && !(repository.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
+            && !(repository.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
-        var stars = repoService.unstarRepo(currentUserId,repository.id);
+        var stars = repoService.unstarRepo(currentUserId, repository.id);
         if (stars == -1) return new Return<>(ReturnCode.REPO_ALREADY_UNSTARRED);
         return new Return<>(ReturnCode.OK, stars);
     }
-
 
 
 }

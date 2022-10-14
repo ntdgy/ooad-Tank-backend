@@ -60,9 +60,7 @@ public class RepoIssueService {
      * @return created issue id
      */
     public int createIssue(int repoId, String title, int IssuerId, String tag) {
-        var repoIssueId = jdbcTemplate.queryForObject(
-                "update repo set next_issue_id = repo.next_issue_id + 1 where id = ? returning next_issue_id;",
-                Integer.class, repoId);
+        var repoIssueId = getRepoNextIssueId(repoId);
         Integer issueId = jdbcTemplate.queryForObject("""
                         insert into issue(repo_id, repo_issue_id, issuer_user_id, title, tag)
                         values (?,?,?,?,?)
@@ -83,15 +81,11 @@ public class RepoIssueService {
     }
 
     public void closeIssue(int issueId) {
-        jdbcTemplate.update("""
-                update issue set status = 'closed' where id = ?;
-                """, issueId);
+        jdbcTemplate.update("update issue set status = 'closed' where id = ?;", issueId);
     }
 
     public void reopenIssue(int issueId) {
-        jdbcTemplate.update("""
-                update issue set status = 'open' where id = ?;
-                """, issueId);
+        jdbcTemplate.update("update issue set status = 'open' where id = ?;", issueId);
     }
 
     public boolean checkIssueOwner(int currentUserId, int issueId) {

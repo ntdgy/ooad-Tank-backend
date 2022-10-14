@@ -1,6 +1,8 @@
 package tank.ooad.fitgub.entity.repo;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.springframework.jdbc.core.RowMapper;
+import org.jetbrains.annotations.Nullable;
 import tank.ooad.fitgub.entity.user.User;
 
 import java.util.List;
@@ -12,25 +14,34 @@ public class RepoMetaData {
     public int star;
     public int fork;
     public int watch;
-    public List<User> contributors;
-    public String fork_from_owner;
-    public String fork_from_name;
+    public List<User> contributors = List.of();
+
+    @JsonIgnore
+    public int forked_from_id;
+    public @Nullable Repo forked_from;
 
     public RepoMetaData() {
     }
 
-    public RepoMetaData(String description, int star, int fork, int watch) {
+    public RepoMetaData(User owner, String name, String description, int star, int fork, int watch, int forked_from_id) {
+        this.owner = owner;
+        this.name = name;
         this.description = description;
         this.star = star;
         this.fork = fork;
         this.watch = watch;
+        this.forked_from_id = forked_from_id;
     }
 
     public static final RowMapper<RepoMetaData> mapper = (rs, rowNum) -> {
-        return new RepoMetaData(rs.getString("repo_description"),
+        return new RepoMetaData(
+                new User(rs.getInt("repo_owner_id"), rs.getString("repo_owner_name"), rs.getString("repo_owner_email")),
+                rs.getString("repo_name"),
+                rs.getString("repo_description"),
                 rs.getInt("repo_stars"),
                 rs.getInt("repo_forks"),
-                rs.getInt("repo_watchers"));
+                rs.getInt("repo_watchers"),
+                rs.getInt("forked_from_id"));
     };
 }
 

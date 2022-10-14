@@ -32,7 +32,7 @@ public class RepoSettingsController {
     @GetMapping("/api/repo/{ownerName}/{repoName}/settings/collaborator")
     public Return<List<RepoCollaborator>> listRepoCollaborators(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
         int userId = (int) AttributeKeys.USER_ID.getValue(session);
-        if (!repoService.checkUserRepoOwner(userId, ownerName, repoName)) {
+        if (!repoService.checkRepoOwnerPermission(userId, ownerName, repoName)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
         var cols = repoService.getRepoCollaborators(userId, repoName);
@@ -41,17 +41,12 @@ public class RepoSettingsController {
 
     /**
      * Add collaborator with email or username
-     *
-     * @param repoName
-     * @param user
-     * @param session
-     * @return
      */
     @RequireLogin
     @PostMapping("/api/repo/{ownerName}/{repoName}/settings/collaborator")
     public Return<List<RepoCollaborator>> addOrAlterCollaborators(@PathVariable String ownerName, @PathVariable String repoName, @RequestBody RepoCollaborator collaborator, HttpSession session) {
         int userId = (int) AttributeKeys.USER_ID.getValue(session);
-        if (!repoService.checkUserRepoOwner(userId, ownerName, repoName)) {
+        if (!repoService.checkRepoOwnerPermission(userId, ownerName, repoName)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
         User invited = userService.findUser(collaborator.user.name, collaborator.user.email);
@@ -67,7 +62,7 @@ public class RepoSettingsController {
     @PostMapping("/api/repo/{ownerName}/{repoName}/settings/delete")
     public Return<Void> deleteRepo(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
         int userId = (int) AttributeKeys.USER_ID.getValueNonNull(session);
-        if (!repoService.checkUserRepoOwner(userId, ownerName, repoName))
+        if (!repoService.checkRepoOwnerPermission(userId, ownerName, repoName))
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         var repo = repoService.getRepo(userId, repoName);
         try {

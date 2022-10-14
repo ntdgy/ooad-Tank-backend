@@ -5,7 +5,6 @@ import org.springframework.stereotype.Component;
 import tank.ooad.fitgub.entity.repo.Repo;
 import tank.ooad.fitgub.entity.repo.RepoCollaborator;
 import tank.ooad.fitgub.entity.repo.RepoMetaData;
-import tank.ooad.fitgub.rest.RepoIssueController;
 
 import java.util.List;
 
@@ -36,7 +35,7 @@ public class RepoService {
      */
     public boolean checkRepoDuplicate(Repo repo, int userId) {
         int cnt = template.queryForObject("select count(*) from repo join user_repo ur on repo.id = ur.repo_id\n" +
-                "where repo.name = ? and ur.user_id = ?;", Integer.class, repo.name, userId);
+                                          "where repo.name = ? and ur.user_id = ?;", Integer.class, repo.name, userId);
         return cnt != 0;
     }
 
@@ -130,7 +129,7 @@ public class RepoService {
     }
 
 
-    public boolean checkUserRepoOwner(int currentUserId, String ownerName, String repoName) {
+    public boolean checkRepoOwnerPermission(int currentUserId, String ownerName, String repoName) {
         Integer cnt = template.queryForObject("""
                         select count(*) from repo join users uo on uo.id = repo.owner_id
                          where repo.owner_id = ? and uo.name = ? and repo.name = ?
@@ -202,29 +201,35 @@ public class RepoService {
         );
     }
 
-
-    public RepoMetaData getRepoMetaData(Repo repo) {
+    public Repo getRepo(int repoId) {
         return template.queryForObject("""
-                        select repo.description as repo_description,
-                               repo.stars       as repo_stars,
-                               repo.forks       as repo_forks,
-                               repo.watchs      as repo_watchers
-                        from repo
-                        where id = ?;
-                        """, RepoMetaData.mapper,
-                repo.id
+                                select repo.id as repo_id, repo.name as repo_name, repo.visible as repo_visible,
+                            repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email
+                            from repo join users uo on repo.owner_id = uo.id
+                        where repo.id = ?""", Repo.mapper,
+                repoId
         );
     }
 
-    public List<String> getForkedRepoNames(Repo repo) {
-        return template.queryForList("""
-                        select repo.name as repo_name, uo.name as owner_name
-                        from fork_from
-                                 join repo on fork_from.fork_id = repo.id
-                                 join users uo on repo.owner_id = uo.id
-                        where fork_from.repo_id = ?;
-                        """, String.class,
-                repo.id);
+    public RepoMetaData getRepoMetaData(Repo repo) {
+        var metaData = template.queryForObject("""
+                select uo.id               as repo_owner_id,
+                       uo.name             as repo_owner_name,
+                       uo.email            as repo_owner_email,
+                       repo.name           as repo_name,
+                       repo.description    as repo_description,
+                       repo.stars          as repo_stars,
+                       repo.forks          as repo_forks,
+                       repo.watchs         as repo_watchers,
+                       repo.forked_from_id as forked_from_id
+                from repo
+                         join users uo on repo.owner_id = uo.id
+                where repo.id = ?;
+                """, RepoMetaData.mapper, repo.id);
+        if (metaData.forked_from_id != 0) {
+            metaData.forked_from = getRepo(metaData.forked_from_id);
+        }
+        return metaData;
     }
 
     public int starRepo(int userId, int repoId) {
@@ -234,16 +239,16 @@ public class RepoService {
                 userId, repoId);
         if (isStarred == null || isStarred == 0) {
             template.update("""
-            insert into star (user_id, repo_id) values (?, ?)""", userId, repoId);
+                    insert into star (user_id, repo_id) values (?, ?)""", userId, repoId);
             var stars = template.queryForObject("""
-            update repo set stars = stars + 1 where id = ?
-            returning stars;
-            """, Integer.class, repoId);
+                    update repo set stars = stars + 1 where id = ?
+                    returning stars;
+                    """, Integer.class, repoId);
             if (stars == null) {
                 throw new RuntimeException("update repo stars failed");
             }
             return stars;
-        }else {
+        } else {
             return -1;
         }
     }
@@ -255,26 +260,26 @@ public class RepoService {
                 userId, repoId);
         if (isStarred != null && isStarred > 0) {
             template.update("""
-            delete from star where user_id = ? and repo_id = ?
-            """, userId, repoId);
+                    delete from star where user_id = ? and repo_id = ?
+                    """, userId, repoId);
             var stars = template.queryForObject("""
-            update repo set stars = stars - 1 where id = ?
-            returning stars;
-            """, Integer.class, repoId);
+                    update repo set stars = stars - 1 where id = ?
+                    returning stars;
+                    """, Integer.class, repoId);
             if (stars == null) {
                 throw new RuntimeException("update repo stars failed");
             }
             return stars;
-        }else {
+        } else {
             return -1;
         }
     }
 
-    public void setPublic(Repo repo) {
-        template.update("update repo set visible = ? where id = ?", Repo.VISIBLE_PUBLIC, repo.id);
+    public void setPublic(int repoId) {
+        template.update("update repo set visible = ? where id = ?", Repo.VISIBLE_PUBLIC, repoId);
     }
 
-    public void setPrivate(Repo repo) {
-        template.update("update repo set visible = ? where id = ?", Repo.VISIBLE_PRIVATE, repo.id);
+    public void setPrivate(int repoId) {
+        template.update("update repo set visible = ? where id = ?", Repo.VISIBLE_PRIVATE, repoId);
     }
 }
