@@ -20,6 +20,8 @@ public class IssueContent {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     public User sender;
 
+    public long created_at;
+
     public String content;
 
 //    public List<String> reactions;
@@ -27,18 +29,20 @@ public class IssueContent {
     public IssueContent() {
     }
 
-    public IssueContent(int content_id, int issue_id, int issue_content_id, User sender, String content) {
+    public IssueContent(int content_id, int issue_id, int issue_content_id, User sender, String content, long created_at) {
         this.content_id = content_id;
         this.issue_id = issue_id;
         this.issue_content_id = issue_content_id;
         this.sender = sender;
         this.content = content;
+        this.created_at = created_at;
     }
 
     public static final RowMapper<IssueContent> mapper = (rs, rowNum) -> {
         return new IssueContent(rs.getInt("content_id"), rs.getInt("issue_id"),
                 rs.getInt("comment_id"),
                 new User(rs.getInt("sender_user_id"), rs.getString("sender_name"), rs.getString("sender_email")),
-                rs.getString("content"));
+                rs.getString("content"),
+                rs.getLong("created_at"));
     };
 }

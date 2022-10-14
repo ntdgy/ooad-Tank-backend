@@ -3,6 +3,7 @@ package tank.ooad.fitgub.entity.repo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.jdbc.core.RowMapper;
 import tank.ooad.fitgub.entity.user.User;
 
@@ -38,7 +39,7 @@ public class Issue {
         iss.repo_issue_id = rs.getInt("repo_issue_id");
         iss.title = rs.getString("title");
         iss.status = rs.getString("status");
-        iss.tag = Arrays.stream(rs.getString("tag").split(",")).toList();
+        iss.tag = Arrays.stream(rs.getString("tag").split(",")).filter(StringUtils::isNotEmpty).toList();
         iss.issuer = new User(rs.getInt("issuer_id"),
                 rs.getString("issuer_name"), rs.getString("issuer_email"));
         iss.created_at = rs.getLong("created_at");

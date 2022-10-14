@@ -32,16 +32,8 @@ public class RepoIssueController {
             @RequestBody Issue issue,
             HttpSession session) {
         int userId = (int) AttributeKeys.USER_ID.getValue(session);
-        StringBuilder sb = new StringBuilder();
-        if (issue.tag != null) {
-            for (String s : issue.tag) {
-                sb.append(s);
-                sb.append(',');
-            }
-            sb.deleteCharAt(sb.length() - 1);
-        } else sb.append("null");
-        String tag = sb.toString();
-
+        if (issue.tag == null) issue.tag = List.of();
+        String tag = String.join(",", issue.tag);
         int repoId = repoService.resolveRepo(ownerName, repoName);
         int issueId = repoIssueService.createIssue(repoId, issue.title, userId, tag);
         for (var content : issue.contents) {

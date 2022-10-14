@@ -153,7 +153,8 @@ public class RepoIssueService {
                        ui.email as issuer_email
                 from issue
                          join users ui on issue.issuer_user_id = ui.id
-                where issue.repo_id = ?;
+                where issue.repo_id = ?
+                order by issue.id desc;
                         """,
                 Issue.mapper,
                 repoId);
@@ -167,7 +168,8 @@ public class RepoIssueService {
                        u.name           as sender_name,
                        u.email          as sender_email,
                        i.content        as content,
-                       i.comment_id     as comment_id
+                       i.comment_id     as comment_id,
+                       i.created_at      as created_at
                 from issue_content i
                          join users u on i.sender_user_id = u.id
                 where issue_id = ?
