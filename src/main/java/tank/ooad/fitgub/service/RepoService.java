@@ -118,6 +118,17 @@ public class RepoService {
         return cnt != null && cnt > 0;
     }
 
+    public boolean checkRepoReadPermission(Repo repo, int currentUserId) {
+        if (repo.isPublic()) return true;
+        if (repo.owner.id == currentUserId) return true;
+        return checkCollaboratorReadPermission(repo.getOwnerName(), repo.getRepoName(), currentUserId);
+    }
+
+    public boolean checkRepoWritePermission(Repo repo, int currentUserId) {
+        if (repo.owner.id == currentUserId) return true;
+        return checkCollaboratorWritePermission(repo.getOwnerName(), repo.getRepoName(), currentUserId);
+    }
+
 
     public boolean checkUserRepoOwner(int currentUserId, String ownerName, String repoName) {
         Integer cnt = template.queryForObject("""

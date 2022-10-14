@@ -6,6 +6,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import tank.ooad.fitgub.entity.repo.Issue;
 import tank.ooad.fitgub.entity.repo.IssueContent;
+import tank.ooad.fitgub.entity.repo.Repo;
 
 import java.util.List;
 
@@ -45,7 +46,7 @@ public class RepoIssueService {
     private int getIssueNextCommentId(int issueId) {
         var nextCommentId = jdbcTemplate.queryForObject(
                 "update issue set next_comment_id = issue.next_comment_id + 1 " +
-                        "where id = ? returning next_comment_id;",
+                "where id = ? returning next_comment_id;",
                 Integer.class, issueId);
         return nextCommentId == null ? -1 : nextCommentId;
     }
@@ -108,79 +109,54 @@ public class RepoIssueService {
         return cnt != null && cnt > 0;
     }
 
-    //    public Issue getIssue(String ownerName, String repoName, int repoIssueId) {
-//        return jdbcTemplate.queryForObject("""
-//                select issue.id, issue.repo_issue_id, issue.title, issue.status, issue.tag,
-//                       ui.id as issuer_id, ui.name as issuer_name, ui.email as issuer_email
-//                from issue
-//                    join users ui on issue.issuer_user_id = ui.id
-//                where issue.id = (select iss.id
-//                            from issue as iss
-//                                     join repo r on r.id = iss.repo_id
-//                                     join users uo on uo.id = r.owner_id
-//                            where uo.name = ?
-//                              and r.name = ?
-//                              and iss.repo_issue_id = ?)
-//                """,
-//                Issue.mapper,
-//                ownerName, repoName, repoIssueId);
-//    }
-    public Issue getIssue(String ownerName, String repoName, int repoIssueId) {
+    public int resolveIssue(int repoId, int repoIssueId) {
         return jdbcTemplate.queryForObject("""
-                            with issue_content1 as (select iss.id, max(iss.created_at) as updated_at
-                                                   from issue as iss
-                                                            join repo r on r.id = iss.repo_id
-                                                            join users uo on uo.id = r.owner_id
-                                                    where uo.name = ?
-                                                      and r.name = ?
-                                                     and iss.repo_issue_id = ?
-                                                   group by iss.id)
-                            select issue.id,
-                                   issue.repo_issue_id,
-                                   issue.title,
-                                   issue.status,
-                                   issue.tag,
-                                   issue.created_at,
-                                   issue_content1.updated_at,
-                                   ui.id    as issuer_id,
-                                   ui.name  as issuer_name,
-                                   ui.email as issuer_email
-                            from issue
-                                     join users ui on issue.issuer_user_id = ui.id
-                                     join issue_content1 on issue.id = issue_content1.id
-                                 --     and issue.id in (select id from issue_content1)
-                            order by issue.id desc;
+                        select issue.id
+                        from issue where issue.repo_id = ? and issue.repo_issue_id = ?;
                         """,
-                Issue.mapper,
-                ownerName, repoName, repoIssueId);
+                Integer.class,
+                repoId, repoIssueId);
     }
 
-    public List<Issue> listIssues(String ownerName, String repoName) {
-        return jdbcTemplate.query("""
-                                with issue_content1 as (select iss.id,max(iss.created_at) as updated_at
-                                                       from issue as iss
-                                                                join repo r on r.id = iss.repo_id
-                                                                join users uo on uo.id = r.owner_id
-                                                       where uo.name = ?
-                                                         and r.name = ? group by iss.id)
-                                select issue.id,
-                                       issue.repo_issue_id,
-                                       issue.title,
-                                       issue.status,
-                                       issue.tag,
-                                       issue.created_at,
-                                       issue_content1.updated_at,
-                                       ui.id    as issuer_id,
-                                       ui.name  as issuer_name,
-                                       ui.email as issuer_email
-                                from issue
-                                        join users ui on issue.issuer_user_id = ui.id
-                                        join issue_content1 on issue.id = issue_content1.id
-                                --     and issue.id in (select id from issue_content1)
-                                order by issue.id desc;
+    public Issue getIssue(int repoId, int repoIssueId) {
+        return jdbcTemplate.queryForObject("""
+                    select issue.id,
+                           issue.repo_issue_id,
+                           issue.title,
+                           issue.status,
+                           issue.tag,
+                           issue.created_at,
+                           (select ic.created_at from issue_content ic where ic.issue_id = issue.id order by ic.comment_id desc limit 1) as updated_at,
+                           ui.id    as issuer_id,
+                           ui.name  as issuer_name,
+                           ui.email as issuer_email
+                    from issue
+                             join users ui on issue.issuer_user_id = ui.id
+                    where issue.repo_id = ?
+                      and issue.repo_issue_id = ?;
                         """,
                 Issue.mapper,
-                ownerName, repoName);
+                repoId, repoIssueId);
+    }
+
+    public List<Issue> listIssues(int repoId) {
+        return jdbcTemplate.query("""
+                select issue.id,
+                       issue.repo_issue_id,
+                       issue.title,
+                       issue.status,
+                       issue.tag,
+                       issue.created_at,
+                       (select ic.created_at from issue_content ic where ic.issue_id = issue.id order by ic.comment_id desc limit 1) as updated_at,
+                       ui.id    as issuer_id,
+                       ui.name  as issuer_name,
+                       ui.email as issuer_email
+                from issue
+                         join users ui on issue.issuer_user_id = ui.id
+                where issue.repo_id = ?;
+                        """,
+                Issue.mapper,
+                repoId);
     }
 
     public void loadContents(Issue issue) {

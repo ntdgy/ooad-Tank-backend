@@ -59,10 +59,10 @@ public class RepoIssueController {
         // check private repo
         var repo = repoService.getRepo(ownerName, repoName);
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
-        if (!repo.isPublic() && (currentUserId == 0 || !repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
+        if (!repoService.checkRepoReadPermission(repo, currentUserId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
-        var issue = repoIssueService.getIssue(ownerName, repoName, repoIssueId);
+        var issue = repoIssueService.getIssue(repo.id, repoIssueId);
         repoIssueService.loadContents(issue);
         return new Return<>(ReturnCode.OK, issue);
     }
@@ -70,9 +70,14 @@ public class RepoIssueController {
     @GetMapping("/api/repo/{ownerName}/{repoName}/issue")
     public Return<List<Issue>> listIssues(
             @PathVariable String ownerName,
-            @PathVariable String repoName) {
-        var issue = repoIssueService.listIssues(ownerName, repoName);
-        log.error("{}", issue.get(0));
+            @PathVariable String repoName,
+            HttpSession session) {
+        var repo = repoService.getRepo(ownerName, repoName);
+        int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
+        if (!repoService.checkRepoReadPermission(repo, currentUserId)) {
+            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+        }
+        var issue = repoIssueService.listIssues(repo.id);
         return new Return<>(ReturnCode.OK, issue);
     }
 
@@ -85,7 +90,8 @@ public class RepoIssueController {
             HttpSession session) {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
         int issueId = repoIssueService.resolveIssue(ownerName, repoName, repoIssueId);
-        if (!repoService.checkUserRepoOwner(currentUserId, ownerName, repoName) && !repoService.checkCollaboratorWritePermission(ownerName, repoName, currentUserId) && !repoIssueService.checkIssueOwner(currentUserId, issueId)) {
+        var repo = repoService.getRepo(ownerName, repoName);
+        if (!repoService.checkRepoWritePermission(repo, currentUserId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
         if (!repoIssueService.checkIssueClosable(issueId)) {
@@ -123,9 +129,13 @@ public class RepoIssueController {
             @RequestBody IssueContent issueContent,
             HttpSession httpsession) {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(httpsession);
-        var issue = repoIssueService.getIssue(ownerName, repoName, repoIssueId);
-        int contentId = repoIssueService.insertIssueContent(issue.id,currentUserId,issueContent);
-        return new Return<>(ReturnCode.OK,contentId);
+        var repo = repoService.getRepo(ownerName, repoName);
+        var issueId = repoIssueService.resolveIssue(repo.id, repoIssueId);
+        if (!repoService.checkRepoWritePermission(repo, currentUserId)) {
+            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+        }
+        int contentId = repoIssueService.insertIssueContent(issueId, currentUserId, issueContent);
+        return new Return<>(ReturnCode.OK, contentId);
     }
 
 

@@ -58,4 +58,12 @@ public class Repo {
         repo.owner = new User(rs.getInt("repo_owner_id"), rs.getString("repo_owner_name"), rs.getString("repo_owner_email"));
         return repo;
     };
+
+    public String getOwnerName() {
+        return this.owner.name;
+    }
+
+    public String getRepoName() {
+        return this.name;
+    }
 }
