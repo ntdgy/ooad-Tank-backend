@@ -139,6 +139,7 @@ create table issue_content
             references users,
     type           text default 'comment'::text not null,
     content        text                         not null,
+    created_at     bigint default (EXTRACT(epoch FROM now()) * (1000)::numeric) not null,
     constraint issue_content_issue_id_comment_id_key
         unique (issue_id, comment_id)
 );

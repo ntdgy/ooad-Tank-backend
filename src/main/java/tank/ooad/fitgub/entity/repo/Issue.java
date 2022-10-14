@@ -23,6 +23,10 @@ public class Issue {
     public List<String> tag;
     public String status;
 
+
+    public long created_at;
+    public long updated_at;
+
     public List<IssueContent> contents;
 
     public Issue() {
@@ -37,6 +41,8 @@ public class Issue {
         iss.tag = Arrays.stream(rs.getString("tag").split(",")).toList();
         iss.issuer = new User(rs.getInt("issuer_id"),
                 rs.getString("issuer_name"), rs.getString("issuer_email"));
+        iss.created_at = rs.getLong("created_at");
+        iss.updated_at = rs.getLong("updated_at");
         return iss;
     };
 }

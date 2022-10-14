@@ -1,5 +1,6 @@
 package tank.ooad.fitgub.rest;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import tank.ooad.fitgub.entity.repo.Issue;
@@ -15,6 +16,7 @@ import javax.servlet.http.HttpSession;
 import java.util.List;
 
 @RestController
+@Slf4j
 public class RepoIssueController {
 
     @Autowired
@@ -70,6 +72,7 @@ public class RepoIssueController {
             @PathVariable String ownerName,
             @PathVariable String repoName) {
         var issue = repoIssueService.listIssues(ownerName, repoName);
+        log.error("{}", issue.get(0));
         return new Return<>(ReturnCode.OK, issue);
     }
 
