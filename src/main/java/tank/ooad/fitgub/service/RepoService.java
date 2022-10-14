@@ -4,6 +4,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import tank.ooad.fitgub.entity.repo.Repo;
 import tank.ooad.fitgub.entity.repo.RepoCollaborator;
+import tank.ooad.fitgub.entity.repo.RepoMetaData;
 import tank.ooad.fitgub.rest.RepoIssueController;
 
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.List;
 public class RepoService {
 
     private final JdbcTemplate template;
+
     public RepoService(JdbcTemplate template) {
         this.template = template;
     }
@@ -187,6 +189,74 @@ public class RepoService {
                         where uo.name = ? and repo.name = ?""", Repo.mapper,
                 ownerName, repoName
         );
+    }
+
+
+    public RepoMetaData getRepoMetaData(Repo repo) {
+        return template.queryForObject("""
+                        select repo.description as repo_description,
+                               repo.stars       as repo_stars,
+                               repo.forks       as repo_forks,
+                               repo.watchs      as repo_watchers
+                        from repo
+                        where id = ?;
+                        """, RepoMetaData.mapper,
+                repo.id
+        );
+    }
+
+    public List<String> getForkedRepoNames(Repo repo) {
+        return template.queryForList("""
+                        select repo.name as repo_name, uo.name as owner_name
+                        from fork_from
+                                 join repo on fork_from.fork_id = repo.id
+                                 join users uo on repo.owner_id = uo.id
+                        where fork_from.repo_id = ?;
+                        """, String.class,
+                repo.id);
+    }
+
+    public int starRepo(int userId, int repoId) {
+        var isStarred = template.queryForObject("""
+                        select count(*) from star where user_id = ? and repo_id = ?
+                        """, Integer.class,
+                userId, repoId);
+        if (isStarred == null || isStarred == 0) {
+            template.update("""
+            insert into star (user_id, repo_id) values (?, ?)""", userId, repoId);
+            var stars = template.queryForObject("""
+            update repo set stars = stars + 1 where id = ?
+            returning stars;
+            """, Integer.class, repoId);
+            if (stars == null) {
+                throw new RuntimeException("update repo stars failed");
+            }
+            return stars;
+        }else {
+            return -1;
+        }
+    }
+
+    public int unstarRepo(int userId, int repoId) {
+        var isStarred = template.queryForObject("""
+                        select count(*) from star where user_id = ? and repo_id = ?
+                        """, Integer.class,
+                userId, repoId);
+        if (isStarred != null && isStarred > 0) {
+            template.update("""
+            delete from star where user_id = ? and repo_id = ?
+            """, userId, repoId);
+            var stars = template.queryForObject("""
+            update repo set stars = stars - 1 where id = ?
+            returning stars;
+            """, Integer.class, repoId);
+            if (stars == null) {
+                throw new RuntimeException("update repo stars failed");
+            }
+            return stars;
+        }else {
+            return -1;
+        }
     }
 
     public void setPublic(Repo repo) {

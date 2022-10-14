@@ -1,8 +1,10 @@
 package tank.ooad.fitgub.rest;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import tank.ooad.fitgub.entity.repo.Repo;
 import tank.ooad.fitgub.entity.repo.RepoCollaborator;
+import tank.ooad.fitgub.entity.repo.RepoMetaData;
 import tank.ooad.fitgub.git.GitOperation;
 import tank.ooad.fitgub.service.RepoService;
 import tank.ooad.fitgub.utils.AttributeKeys;
@@ -15,6 +17,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
+@Slf4j
 public class RepoController {
 
     private final RepoService repoService;
@@ -81,4 +84,57 @@ public class RepoController {
         repoService.setPrivate(repo);
         return Return.OK;
     }
+
+    @GetMapping("/api/repo/{ownerName}/{repoName}/metaData")
+    public Return<RepoMetaData> getRepoMetaData(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
+        int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
+        Repo repository = repoService.getRepo(ownerName, repoName);
+        if (repository == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
+        if (!repository.isPublic() && currentUserId != 0
+                && !(repository.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
+            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+        }
+        var repoMetaData = repoService.getRepoMetaData(repository);
+        repoMetaData.owner = repository.owner;
+        repoMetaData.name = repository.name;
+        var forkedData = repoService.getForkedRepoNames(repository);
+        if(!forkedData.isEmpty()) {
+            repoMetaData.fork_from_name = forkedData.get(0);
+            repoMetaData.fork_from_owner = forkedData.get(1);
+        }
+        return new Return<>(ReturnCode.OK, repoMetaData);
+    }
+
+    @RequireLogin
+    @GetMapping("/api/repo/{ownerName}/{repoName}/action/star")
+    public Return<Integer> starRepo(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
+        int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
+        Repo repository = repoService.getRepo(ownerName, repoName);
+        if (repository == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
+        if (!repository.isPublic() && currentUserId != 0
+                && !(repository.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
+            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+        }
+        var stars = repoService.starRepo(currentUserId,repository.id);
+        if (stars == -1) return new Return<>(ReturnCode.REPO_ALREADY_STARRED);
+        return new Return<>(ReturnCode.OK, stars);
+    }
+
+    @RequireLogin
+    @GetMapping("/api/repo/{ownerName}/{repoName}/action/unStar")
+    public Return<Integer> unstarRepo(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
+        int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
+        Repo repository = repoService.getRepo(ownerName, repoName);
+        if (repository == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
+        if (!repository.isPublic() && currentUserId != 0
+                && !(repository.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
+            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+        }
+        var stars = repoService.unstarRepo(currentUserId,repository.id);
+        if (stars == -1) return new Return<>(ReturnCode.REPO_ALREADY_UNSTARRED);
+        return new Return<>(ReturnCode.OK, stars);
+    }
+
+
+
 }

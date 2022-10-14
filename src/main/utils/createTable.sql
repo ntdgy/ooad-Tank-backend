@@ -37,6 +37,7 @@ create table repo
     visible       integer default 0 not null,
     next_issue_id integer default 0 not null,
     owner_id      integer           not null,
+    description   text,
     stars         integer default 0 not null,
     watchs        integer default 0 not null,
     forks         integer default 0 not null,

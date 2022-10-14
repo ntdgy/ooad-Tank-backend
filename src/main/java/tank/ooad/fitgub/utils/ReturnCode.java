@@ -26,7 +26,14 @@ public enum ReturnCode {
     REPO_NON_EXIST(-3001, "repo is not existed."),
     REPO_NO_PERMISSION(-3002, "no permission"),
     REPO_ALREADY_PUBLIC(-3003, "repo is already public"),
-    REPO_ALREADY_PRIVATE(-3004, "repo is already private");
+    REPO_ALREADY_PRIVATE(-3004, "repo is already private"),
+    REPO_ALREADY_STARRED(-3005, "repo is already starred"),
+    REPO_ALREADY_UNSTARRED(-3006, "repo is already unstarred"),
+    REPO_ALREADY_WATCHED(-3007, "repo is already watched"),
+    REPO_ALREADY_UNWATCHED(-3008, "repo is already unwatched"),
+    REPO_ALREADY_FORKED(-3009, "repo is already forked"),
+    REPO_ALREADY_UNFORKED(-3010, "repo is already unforked");
+
 
 
     public final int code;
