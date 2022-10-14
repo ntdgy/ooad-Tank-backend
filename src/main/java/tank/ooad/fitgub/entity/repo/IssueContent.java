@@ -1,6 +1,7 @@
 package tank.ooad.fitgub.entity.repo;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.jdbc.core.RowMapper;
 import tank.ooad.fitgub.entity.user.User;
 
@@ -13,8 +14,10 @@ public class IssueContent {
     @JsonIgnore
     public int issue_id;
 
+    @JsonProperty(access = JsonProperty.Access.READ_WRITE, defaultValue = "0")
     public int issue_content_id;
 
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     public User sender;
 
     public String content;
