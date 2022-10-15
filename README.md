@@ -1,9 +1,7 @@
 
 
-# Tank Git
+# Tank Backend
 
-## ooad-GitServer
+## ooad-Backend
 
-使用 jgit 操作git库, git库初始化为bare git repo.
-
-存储在 ../repo-store/{user_id}/{repo_id}
+使用 spring 提供后端服务，运行命令为 `mvn spring-boot:run`.
