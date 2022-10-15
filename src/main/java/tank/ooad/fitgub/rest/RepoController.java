@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import tank.ooad.fitgub.entity.repo.Repo;
 import tank.ooad.fitgub.entity.repo.RepoMetaData;
+import tank.ooad.fitgub.exception.GitRepoNonExistException;
 import tank.ooad.fitgub.git.GitOperation;
 import tank.ooad.fitgub.service.RepoService;
 import tank.ooad.fitgub.utils.AttributeKeys;
@@ -46,7 +47,7 @@ public class RepoController {
 
     @RequireLogin
     @GetMapping("/api/repo/list_self")
-    public Return<List<Repo>> listMyRepo(HttpSession session) {
+    public Return<List<Repo>> listMyRepo(HttpSession session) throws GitRepoNonExistException {
         int userId = (int) AttributeKeys.USER_ID.getValueNonNull(session);
         return new Return<>(ReturnCode.OK, repoService.getUserRepos(userId));
     }

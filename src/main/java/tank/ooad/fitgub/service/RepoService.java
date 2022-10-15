@@ -1,10 +1,12 @@
 package tank.ooad.fitgub.service;
 
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import tank.ooad.fitgub.entity.repo.Repo;
 import tank.ooad.fitgub.entity.repo.RepoCollaborator;
 import tank.ooad.fitgub.entity.repo.RepoMetaData;
+import tank.ooad.fitgub.exception.GitRepoNonExistException;
 
 import java.util.List;
 
@@ -35,7 +37,7 @@ public class RepoService {
      */
     public boolean checkRepoDuplicate(Repo repo, int userId) {
         int cnt = template.queryForObject("select count(*) from repo join user_repo ur on repo.id = ur.repo_id\n" +
-                                          "where repo.name = ? and ur.user_id = ?;", Integer.class, repo.name, userId);
+                "where repo.name = ? and ur.user_id = ?;", Integer.class, repo.name, userId);
         return cnt != 0;
     }
 
@@ -57,7 +59,7 @@ public class RepoService {
      *
      * @return
      */
-    public List<Repo> getUserRepos(int userId) {
+    public List<Repo> getUserRepos(int userId) throws GitRepoNonExistException {
         return template.query("""
                         select repo.id as repo_id, repo.name as repo_name, repo.visible as repo_visible,
                                     repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email
@@ -182,33 +184,45 @@ public class RepoService {
     }
 
     public Repo getRepo(int userId, String repoName) {
-        return template.queryForObject("""
-                                select repo.id as repo_id, repo.name as repo_name, repo.visible as repo_visible,
-                            repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email
-                            from repo join users uo on repo.owner_id = uo.id
-                        where repo.owner_id = ? and repo.name = ?""", Repo.mapper,
-                userId, repoName
-        );
+        try {
+            return template.queryForObject("""
+                                    select repo.id as repo_id, repo.name as repo_name, repo.visible as repo_visible,
+                                repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email
+                                from repo join users uo on repo.owner_id = uo.id
+                            where repo.owner_id = ? and repo.name = ?""", Repo.mapper,
+                    userId, repoName
+            );
+        } catch (EmptyResultDataAccessException e) {
+            return null;
+        }
     }
 
     public Repo getRepo(String ownerName, String repoName) {
-        return template.queryForObject("""
-                                select repo.id as repo_id, repo.name as repo_name, repo.visible as repo_visible,
-                            repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email
-                            from repo join users uo on repo.owner_id = uo.id
-                        where uo.name = ? and repo.name = ?""", Repo.mapper,
-                ownerName, repoName
-        );
+        try {
+            return template.queryForObject("""
+                                    select repo.id as repo_id, repo.name as repo_name, repo.visible as repo_visible,
+                                repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email
+                                from repo join users uo on repo.owner_id = uo.id
+                            where uo.name = ? and repo.name = ?""", Repo.mapper,
+                    ownerName, repoName
+            );
+        } catch (EmptyResultDataAccessException e) {
+            return null;
+        }
     }
 
     public Repo getRepo(int repoId) {
-        return template.queryForObject("""
-                                select repo.id as repo_id, repo.name as repo_name, repo.visible as repo_visible,
-                            repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email
-                            from repo join users uo on repo.owner_id = uo.id
-                        where repo.id = ?""", Repo.mapper,
-                repoId
-        );
+        try {
+            return template.queryForObject("""
+                                    select repo.id as repo_id, repo.name as repo_name, repo.visible as repo_visible,
+                                repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email
+                                from repo join users uo on repo.owner_id = uo.id
+                            where repo.id = ?""", Repo.mapper,
+                    repoId
+            );
+        } catch (EmptyResultDataAccessException e) {
+            return null;
+        }
     }
 
     public RepoMetaData getRepoMetaData(Repo repo) {
