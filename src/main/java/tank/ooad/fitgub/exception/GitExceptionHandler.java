@@ -14,10 +14,9 @@ import tank.ooad.fitgub.utils.ReturnCode;
 @RestControllerAdvice(basePackageClasses = {tank.ooad.fitgub.rest.GitController.class, tank.ooad.fitgub.rest.RepoController.class, tank.ooad.fitgub.rest.RepoIssueController.class})
 public class GitExceptionHandler {
 
-    @ExceptionHandler(EmptyResultDataAccessException.class)
-    public Return<Void> handleEmptyResultDataAccessException(EmptyResultDataAccessException e) {
-        log.info(e.getMessage());
-        return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
+    @ExceptionHandler(GitRepoNonExistException.class)
+    public Return<String> handleEmptyResultDataAccessException(GitRepoNonExistException e) {
+        return new Return<>(ReturnCode.GIT_REPO_NON_EXIST, e.repoName);
     }
 
 }

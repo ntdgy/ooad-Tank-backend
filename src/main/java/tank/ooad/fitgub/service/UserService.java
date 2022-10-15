@@ -1,6 +1,7 @@
 package tank.ooad.fitgub.service;
 
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import tank.ooad.fitgub.entity.user.User;
@@ -45,15 +46,24 @@ public class UserService {
                 select id, name, email from users where id = ?;
                 """, User.mapper, userId);
     }
+
     public User findUser(String name, String email) {
-        return jdbcTemplate.queryForObject("""
-                select id, name, email from users where name = ? or email = ?;
-                """, User.mapper, name, email);
+        try {
+            return jdbcTemplate.queryForObject("""
+                    select id, name, email from users where name = ? or email = ?;
+                    """, User.mapper, name, email);
+        } catch (EmptyResultDataAccessException e) {
+            return null;
+        }
     }
 
     public User findUser(String name) {
-        return jdbcTemplate.queryForObject("""
-                select id, name, email from users where name = ?;
-                """, User.mapper, name);
+        try {
+            return jdbcTemplate.queryForObject("""
+                    select id, name, email from users where name = ?;
+                    """, User.mapper, name);
+        } catch (EmptyResultDataAccessException e) {
+            return null;
+        }
     }
 }

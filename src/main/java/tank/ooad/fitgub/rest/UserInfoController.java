@@ -45,13 +45,9 @@ public class UserInfoController {
     @GetMapping(value = "/api/userinfo/{userName}/avatar",produces = "image/jpg")
     public ResponseEntity<FileSystemResource> getAvatar(@PathVariable String userName) {
         User user = userService.findUser(userName);
-        System.out.println(user);
         if (user == null)
             return ResponseEntity.notFound().build();
         return ResponseEntity.ok().body(userInfoService.getAvatar(user.id));
     }
-
-
-
 
 }
