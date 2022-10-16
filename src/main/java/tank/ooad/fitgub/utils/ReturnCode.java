@@ -12,6 +12,9 @@ public enum ReturnCode {
     USER_REGISTERED(-1001, "user is already registered."),
     USER_ALREADY_LOGIN(-1002, "already login"),
     USER_AUTH_FAILED(-1003, "auth failed"),
+    USER_AVATAR_NOTFOUND(-1004, "avatar is not found."),
+    USER_AVATAR_SET_FAILED(-1005, "avatar format not supported."),
+
 
     GitAPIError(-2000, "Git API Error."),
     GitRepoExist(-2001, "Git Repo Exist."),
@@ -22,17 +25,17 @@ public enum ReturnCode {
     ISSUE_CLOSED(-3001, "issue closed"),
     ISSUE_OPENED(-3002, "issue opened"),
 
-    REPO_DUPLICATED(-3000, "repo is already existed."),
-    REPO_NON_EXIST(-3001, "repo is not existed."),
-    REPO_NO_PERMISSION(-3002, "no permission"),
-    REPO_ALREADY_PUBLIC(-3003, "repo is already public"),
-    REPO_ALREADY_PRIVATE(-3004, "repo is already private"),
-    REPO_ALREADY_STARRED(-3005, "repo is already starred"),
-    REPO_ALREADY_UNSTARRED(-3006, "repo is already unstarred"),
-    REPO_ALREADY_WATCHED(-3007, "repo is already watched"),
-    REPO_ALREADY_UNWATCHED(-3008, "repo is already unwatched"),
-    REPO_ALREADY_FORKED(-3009, "repo is already forked"),
-    REPO_ALREADY_UNFORKED(-3010, "repo is already unforked");
+    REPO_DUPLICATED(-4000, "repo is already existed."),
+    REPO_NON_EXIST(-4001, "repo is not existed."),
+    REPO_NO_PERMISSION(-4002, "no permission"),
+    REPO_ALREADY_PUBLIC(-4003, "repo is already public"),
+    REPO_ALREADY_PRIVATE(-4004, "repo is already private"),
+    REPO_ALREADY_STARRED(-4005, "repo is already starred"),
+    REPO_ALREADY_UNSTARRED(-4006, "repo is already unstarred"),
+    REPO_ALREADY_WATCHED(-4007, "repo is already watched"),
+    REPO_ALREADY_UNWATCHED(-4008, "repo is already unwatched"),
+    REPO_ALREADY_FORKED(-4009, "repo is already forked"),
+    REPO_ALREADY_UNFORKED(-4010, "repo is already unforked");
 
 
 
