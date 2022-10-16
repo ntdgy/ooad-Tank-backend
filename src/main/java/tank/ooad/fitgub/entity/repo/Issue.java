@@ -23,6 +23,7 @@ public class Issue {
     public User issuer;
     public List<String> tag;
     public String status;
+    public int comment_count;
 
 
     public long created_at;
@@ -42,6 +43,7 @@ public class Issue {
         iss.tag = Arrays.stream(rs.getString("tag").split(",")).filter(StringUtils::isNotEmpty).toList();
         iss.issuer = new User(rs.getInt("issuer_id"),
                 rs.getString("issuer_name"), rs.getString("issuer_email"));
+        iss.comment_count = rs.getInt("next_comment_id");
         iss.created_at = rs.getLong("created_at");
         iss.updated_at = rs.getLong("updated_at");
         return iss;

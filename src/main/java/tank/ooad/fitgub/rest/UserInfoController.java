@@ -68,8 +68,6 @@ public class UserInfoController {
             return new Return<>(ReturnCode.USER_NOTFOUND);
         if (user.id != userId)
             return new Return<>(ReturnCode.USER_AUTH_FAILED);
-        Path path = Paths.get("../avatar/" + UUID.randomUUID());
-        log.error(avatar.getContentType());
         var success = userInfoService.setAvatar(userId, avatar);
         if (success)
             return Return.OK;
