@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import tank.ooad.fitgub.entity.repo.Issue;
 import tank.ooad.fitgub.entity.repo.IssueContent;
+import tank.ooad.fitgub.entity.repo.Repo;
 import tank.ooad.fitgub.service.RepoIssueService;
 import tank.ooad.fitgub.service.RepoService;
 import tank.ooad.fitgub.utils.AttributeKeys;
@@ -34,8 +35,11 @@ public class RepoIssueController {
         int userId = (int) AttributeKeys.USER_ID.getValue(session);
         if (issue.tag == null) issue.tag = List.of();
         String tag = String.join(",", issue.tag);
-        int repoId = repoService.resolveRepo(ownerName, repoName);
-        int issueId = repoIssueService.createIssue(repoId, issue.title, userId, tag);
+        Repo repo = repoService.getRepo(ownerName, repoName);
+        if (!repoService.checkRepoReadPermission(repo, userId)) {
+            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+        }
+        int issueId = repoIssueService.createIssue(repo.id, issue.title, userId, tag);
         for (var content : issue.contents) {
             repoIssueService.insertIssueContent(issueId, userId, content);
         }
@@ -124,7 +128,7 @@ public class RepoIssueController {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(httpsession);
         var repo = repoService.getRepo(ownerName, repoName);
         var issueId = repoIssueService.resolveIssue(repo.id, repoIssueId);
-        if (!repoService.checkRepoWritePermission(repo, currentUserId)) {
+        if (!repoService.checkRepoReadPermission(repo, currentUserId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
         int contentId = repoIssueService.insertIssueContent(issueId, currentUserId, issueContent);
