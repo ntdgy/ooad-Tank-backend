@@ -240,10 +240,19 @@ public class RepoService {
                          join users uo on repo.owner_id = uo.id
                 where repo.id = ?;
                 """, RepoMetaData.mapper, repo.id);
-        if (metaData.forked_from_id != 0) {
+        if (metaData!=null && metaData.forked_from_id != 0) {
             metaData.forked_from = getRepo(metaData.forked_from_id);
         }
         return metaData;
+    }
+
+    public boolean updateRepoMetaData(Repo repo, RepoMetaData status) {
+        if (status.description == null) return false; // Illegal data
+        return template.update("""
+                update  repo
+                set description = ?
+                where repo.id = ?
+                """, status.description, repo.id) == 1;
     }
 
     public int starRepo(int userId, int repoId) {

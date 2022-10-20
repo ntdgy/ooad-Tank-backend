@@ -96,6 +96,17 @@ public class RepoController {
     }
 
     @RequireLogin
+    @PostMapping("/api/repo/{ownerName}/{repoName}/updateMetaData")
+    public Return<Boolean> updateRepoMetaData(@RequestBody RepoMetaData repoMetaData, @PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
+        int userId = (int) AttributeKeys.USER_ID.getValueNonNull(session);
+        Repo repo = repoService.getRepo(ownerName, repoName);
+        if (!repoService.checkRepoWritePermission(repo, userId)) {
+            return new Return<>(ReturnCode.REPO_NO_PERMISSION);
+        }
+        return new Return<>(ReturnCode.OK,repoService.updateRepoMetaData(repo, repoMetaData));
+    }
+
+    @RequireLogin
     @GetMapping("/api/repo/{ownerName}/{repoName}/action/star")
     public Return<Integer> starRepo(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
@@ -115,7 +126,7 @@ public class RepoController {
         Repo repository = repoService.getRepo(ownerName, repoName);
         if (repository == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
         if (!repository.isPublic() && currentUserId != 0
-            && !(repository.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
+                && !(repository.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
         var stars = repoService.unstarRepo(currentUserId, repository.id);
