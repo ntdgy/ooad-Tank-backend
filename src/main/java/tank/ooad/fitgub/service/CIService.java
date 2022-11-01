@@ -1,7 +1,6 @@
 package tank.ooad.fitgub.service;
 
 import com.github.dockerjava.api.DockerClient;
-import com.github.dockerjava.api.async.ResultCallback;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.command.ExecCreateCmdResponse;
 import com.github.dockerjava.core.command.ExecStartResultCallback;
@@ -54,17 +53,16 @@ public class CIService {
                 client.startContainerCmd(container.getId()).exec();
                 System.out.println("container id: " + container.getId());
                 for (var step : job.steps) {
-                    System.out.println(step.run);
-                    for(var run : step.run){
-                        ExecCreateCmdResponse execCreateCmdResponse = client.execCreateCmd(container.getId())
-                                .withAttachStdout(true)
-                                .withAttachStderr(true)
-                                .withCmd("sh", "-c", run)
-                                .exec();
-                        client.execStartCmd(execCreateCmdResponse.getId()).withDetach(false).withTty(true)
-                                .exec(new ResultCallback.Adapter<>()).awaitCompletion();
-                    }
+                    String run = String.join(";", step.run);
+                    ExecCreateCmdResponse execCreateCmdResponse = client.execCreateCmd(container.getId())
+                            .withAttachStdout(true)
+                            .withAttachStderr(true)
+                            .withCmd("bash", "-c", run)
+                            .exec();
+                    client.execStartCmd(execCreateCmdResponse.getId()).withDetach(false).withTty(true)
+                            .exec(new ExecStartResultCallback(System.out, System.err)).awaitCompletion();
                 }
+                Thread.sleep(1000);
                 client.stopContainerCmd(container.getId()).exec();
                 client.removeContainerCmd(container.getId()).exec();
             }
