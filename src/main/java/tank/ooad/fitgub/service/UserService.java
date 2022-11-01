@@ -7,6 +7,8 @@ import org.springframework.stereotype.Component;
 import tank.ooad.fitgub.entity.user.User;
 import tank.ooad.fitgub.utils.Crypto;
 
+import java.util.UUID;
+
 @Component
 public class UserService {
     private final JdbcTemplate jdbcTemplate;
@@ -17,6 +19,11 @@ public class UserService {
 
     public boolean checkExist(String username, String email) {
         Integer count = jdbcTemplate.queryForObject("select count(*) from users where name = ? or email=?", Integer.class, username, email);
+        return count != null && count != 0;
+    }
+
+    public boolean checkExist(int githubId) {
+        Integer count = jdbcTemplate.queryForObject("select count(*) from users where github_id=?", Integer.class, githubId);
         return count != null && count != 0;
     }
 
@@ -39,6 +46,23 @@ public class UserService {
         } catch (DataAccessException ig) {
             return 0;
         }
+    }
+
+    public int validateUser(int githubId) {
+        try {
+            Integer id = jdbcTemplate.queryForObject("select id from users where github_id = ?;", Integer.class, githubId);
+            if (id != null) return id;
+            return 0;
+        } catch (DataAccessException ig) {
+            return 0;
+        }
+    }
+
+    public int createUser(int githubId, String name, String email) {
+        String passwd = UUID.randomUUID().toString();
+        Integer id = jdbcTemplate.queryForObject("insert into users(name, password, email, github_id) values (?,?,?,?) returning id;",
+                Integer.class, name, Crypto.hashPassword(passwd), email, githubId);
+        return id == null ? 0 : id;
     }
 
     public User getUser(int userId) {

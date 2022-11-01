@@ -1,6 +1,5 @@
 package tank.ooad.fitgub.service;
 
-import com.alibaba.fastjson.JSONObject;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.model.*;
@@ -22,7 +21,7 @@ public class DockerClientService {
 //        DockerClient dockerClient = DockerClientBuilder.getInstance("tcp://192.168.1.3:2375").build();
         DockerClient dockerClient = DockerClientBuilder.getInstance(dockerClientConfig).build();
         Info info = dockerClient.infoCmd().exec();
-        String infoStr = JSONObject.toJSONString(info);
+//        String infoStr = JSONObject.toJSONString(info);
         System.out.println("docker的环境信息如下：=================");
         System.out.println(info);
         return dockerClient;
