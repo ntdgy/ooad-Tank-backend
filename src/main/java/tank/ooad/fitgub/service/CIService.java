@@ -9,10 +9,7 @@ import tank.ooad.fitgub.entity.ci.CI;
 import tank.ooad.fitgub.entity.ci.Job;
 import tank.ooad.fitgub.entity.ci.Step;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -47,10 +44,10 @@ public class CIService {
             DockerClientService dockerClientService = new DockerClientService();
             //连接docker服务器
             DockerClient client = dockerClientService.connectDocker();
-            System.out.println(ci.jobs.size());
             for (var job : ci.jobs) {
                 CreateContainerResponse container = client.createContainerCmd("dgy/ci:v0.1").withCmd("sleep", "3").exec();
                 client.startContainerCmd(container.getId()).exec();
+                OutputStream outputStream = new FileOutputStream("/src/main/docker-log/"+container.getId()+".log");
                 System.out.println("container id: " + container.getId());
                 for (var step : job.steps) {
                     String run = String.join(";", step.run);
@@ -60,7 +57,7 @@ public class CIService {
                             .withCmd("bash", "-c", run)
                             .exec();
                     client.execStartCmd(execCreateCmdResponse.getId()).withDetach(false).withTty(true)
-                            .exec(new ExecStartResultCallback(System.out, System.err)).awaitCompletion();
+                            .exec(new ExecStartResultCallback(outputStream, System.err)).awaitCompletion();
                 }
                 Thread.sleep(1000);
                 client.stopContainerCmd(container.getId()).exec();
