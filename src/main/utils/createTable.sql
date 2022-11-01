@@ -9,7 +9,8 @@ create table users
         constraint users_name_key
             unique,
     password varchar     not null,
-    email    varchar     not null
+    email    varchar     not null,
+    github_id int
 );
 
 create table user_info
