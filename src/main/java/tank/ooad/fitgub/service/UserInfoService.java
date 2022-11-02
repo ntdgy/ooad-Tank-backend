@@ -43,9 +43,14 @@ public class UserInfoService {
         return 1;
     }
 
+    public boolean updateUserHomePageUrl(int userId, String url) {
+        jdbcTemplate.update("update user_info set url = ? where user_id = ?", url, userId);
+        return true;
+    }
 
-    public void setGithubUser(int userId, String github) {
-        jdbcTemplate.update("update user_info set github = ? where user_id = ?", github, userId);
+    public boolean updateUserBio(int userId, String bio) {
+        jdbcTemplate.update("update user_info set bio = ? where user_id = ?", bio, userId);
+        return true;
     }
 
     public FileSystemResource getAvatar(int userId) {

@@ -37,15 +37,6 @@ public class UserInfoController {
     @Autowired
     private UserService userService;
 
-    @RequireLogin
-    @PostMapping("/api/userinfo/setGithub")
-    public Return<Void> setGithubUser(@RequestParam String githubUserName, HttpSession session) {
-        int userId = (int) AttributeKeys.USER_ID.getValue(session);
-        if (userId == 0)
-            return new Return<>(ReturnCode.LOGIN_REQUIRED);
-        userInfoService.setGithubUser(userId, githubUserName);
-        return Return.OK;
-    }
 
     @GetMapping(value = "/api/userinfo/{userName}/avatar", produces = "image/jpg")
     public ResponseEntity<FileSystemResource> getAvatar(@PathVariable String userName) {
@@ -53,6 +44,22 @@ public class UserInfoController {
         if (user == null)
             return ResponseEntity.notFound().build();
         return ResponseEntity.ok().body(userInfoService.getAvatar(user.id));
+    }
+
+    @RequireLogin
+    @PostMapping("/api/userinfo/updateUrl")
+    public Return<Void> updateUrl(@RequestParam String url, HttpSession session) {
+        int userId = (int) AttributeKeys.USER_ID.getValue(session);
+        userInfoService.updateUserHomePageUrl(userId, url);
+        return Return.OK;
+    }
+
+    @RequireLogin
+    @PostMapping("/api/userinfo/updateBio")
+    public Return<Void> updateBio(@RequestParam String bio, HttpSession session) {
+        int userId = (int) AttributeKeys.USER_ID.getValue(session);
+        userInfoService.updateUserBio(userId, bio);
+        return Return.OK;
     }
 
     @RequireLogin
