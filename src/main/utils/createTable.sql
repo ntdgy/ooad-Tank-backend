@@ -23,9 +23,7 @@ create table user_info
     display_name varchar                                                       not null,
     bio          varchar default ''::character varying                         not null,
     create_time  bigint  default (EXTRACT(epoch FROM now()) * (1000)::numeric) not null,
-    url          text,
-    avatar       text,
-    github       text
+    url          text
 );
 
 comment on column user_info.url is 'user homepage url';
