@@ -15,6 +15,8 @@ public enum ReturnCode {
     USER_AVATAR_NOTFOUND(-1004, "avatar is not found."),
     USER_AVATAR_SET_FAILED(-1005, "avatar format not supported."),
     USERNAME_OR_EMAIL_EXIST(-1006, "username or email already exist."),
+    USER_NOT_EXIST(-1007, "user not exist."),
+    USER_WRONG_VERIFY_CODE(-1008, "wrong verify code."),
 
 
     GitAPIError(-2000, "Git API Error."),

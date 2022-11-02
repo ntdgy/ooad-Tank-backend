@@ -63,7 +63,6 @@ public class OauthController {
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
-
         return null;
     }
 

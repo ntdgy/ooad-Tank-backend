@@ -1,10 +1,8 @@
 package tank.ooad.fitgub.rest;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
@@ -13,16 +11,12 @@ import tank.ooad.fitgub.entity.user.User;
 import tank.ooad.fitgub.service.UserInfoService;
 import tank.ooad.fitgub.service.UserService;
 import tank.ooad.fitgub.utils.AttributeKeys;
-import tank.ooad.fitgub.utils.Crypto;
 import tank.ooad.fitgub.utils.Return;
 import tank.ooad.fitgub.utils.ReturnCode;
 import tank.ooad.fitgub.utils.permission.RequireLogin;
 
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.UUID;
 
 @RestController
 @Slf4j
@@ -40,7 +34,7 @@ public class UserInfoController {
 
     @GetMapping(value = "/api/userinfo/{userName}/avatar", produces = "image/jpg")
     public ResponseEntity<FileSystemResource> getAvatar(@PathVariable String userName) {
-        User user = userService.findUser(userName);
+        User user = userService.findUserByName(userName);
         if (user == null)
             return ResponseEntity.notFound().build();
         return ResponseEntity.ok().body(userInfoService.getAvatar(user.id));
@@ -70,7 +64,7 @@ public class UserInfoController {
         int userId = (int) AttributeKeys.USER_ID.getValue(session);
         if (userId == 0)
             return new Return<>(ReturnCode.LOGIN_REQUIRED);
-        User user = userService.findUser(userName);
+        User user = userService.findUserByName(userName);
         if (user == null)
             return new Return<>(ReturnCode.USER_NOTFOUND);
         if (user.id != userId)

@@ -5,18 +5,32 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import tank.ooad.fitgub.entity.user.User;
+import tank.ooad.fitgub.entity.user.VerificationCode;
 import tank.ooad.fitgub.utils.Crypto;
+
+import java.util.HashMap;
 
 @Component
 public class UserService {
     private final JdbcTemplate jdbcTemplate;
 
-    public UserService(JdbcTemplate template) {
+    private final MailService mailService;
+
+    private final HashMap<Integer, VerificationCode> verificationCodeHashMap;
+
+    public UserService(JdbcTemplate template, MailService mailService) {
         this.jdbcTemplate = template;
+        this.mailService = mailService;
+        this.verificationCodeHashMap = new HashMap<>();
     }
 
     public boolean checkExist(String username, String email) {
         Integer count = jdbcTemplate.queryForObject("select count(*) from users where name = ? or email=?", Integer.class, username, email);
+        return count != null && count != 0;
+    }
+
+    public boolean checkExist(String email) {
+        Integer count = jdbcTemplate.queryForObject("select count(*) from users where email=?", Integer.class, email);
         return count != null && count != 0;
     }
 
@@ -44,6 +58,30 @@ public class UserService {
         } catch (DataAccessException ig) {
             return 0;
         }
+    }
+
+    public String sendVerificationCode(int userId,String email) {
+        cleanExpiredVerificationCode();
+        String code = Crypto.generateVerificationCode();
+        VerificationCode verificationCode = new VerificationCode(userId, code);
+        verificationCodeHashMap.put(userId, verificationCode);
+        String result = mailService.sendVerificationCode(email, code);
+        return result;
+    }
+
+    public boolean checkVerificationCode(int userId, String code) {
+        cleanExpiredVerificationCode();
+        VerificationCode verificationCode = verificationCodeHashMap.get(userId);
+        if (verificationCode == null) return false;
+        if (verificationCode.expireTime < System.currentTimeMillis()) {
+            verificationCodeHashMap.remove(userId);
+            return false;
+        }
+        return verificationCode.code.equals(code);
+    }
+
+    private void cleanExpiredVerificationCode() {
+        verificationCodeHashMap.entrySet().removeIf(entry -> entry.getValue().expireTime < System.currentTimeMillis());
     }
 
     public int validateUser(int githubId) {
@@ -77,7 +115,7 @@ public class UserService {
                 """, User.mapper, userId);
     }
 
-    public User findUser(String name, String email) {
+    public User findUserByName(String name, String email) {
         try {
             return jdbcTemplate.queryForObject("""
                     select id, name, email from users where name = ? or email = ?;
@@ -87,11 +125,21 @@ public class UserService {
         }
     }
 
-    public User findUser(String name) {
+    public User findUserByName(String name) {
         try {
             return jdbcTemplate.queryForObject("""
                     select id, name, email from users where name = ?;
                     """, User.mapper, name);
+        } catch (EmptyResultDataAccessException e) {
+            return null;
+        }
+    }
+    
+    public User findUserByEmail(String email){
+        try {
+            return jdbcTemplate.queryForObject("""
+                    select id, name, email from users where email = ?;
+                    """, User.mapper, email);
         } catch (EmptyResultDataAccessException e) {
             return null;
         }

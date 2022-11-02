@@ -15,4 +15,12 @@ public class Crypto {
     public static String getSHA1(String raw) {
         return DigestUtils.sha1Hex(raw);
     }
+
+    public static String generateVerificationCode(){
+        StringBuilder code = new StringBuilder();
+        for (int i = 0; i < 6; i++) {
+            code.append((int)(Math.random() * 10));
+        }
+        return code.toString();
+    }
 }

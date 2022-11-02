@@ -2,7 +2,6 @@ package tank.ooad.fitgub.rest;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 import tank.ooad.fitgub.entity.user.User;
@@ -13,7 +12,6 @@ import tank.ooad.fitgub.utils.Return;
 import tank.ooad.fitgub.utils.ReturnCode;
 import tank.ooad.fitgub.utils.permission.RequireLogin;
 
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
@@ -68,6 +66,23 @@ public class UserController {
         Integer id = jdbcTemplate.queryForObject("insert into users(name, password, email) values (?,?,?) returning id;",
                 Integer.class, register.name, Crypto.hashPassword(register.password), register.email);
         jdbcTemplate.update("insert into user_info(user_id, display_name, bio) values (?,?,'');", id, register.name);
+        return Return.OK;
+    }
+
+    @PostMapping("/api/user/sendResetPasswordEmail")
+    public Return<Void> resetPassword(@RequestParam String email) {
+        if (!userService.checkExist(email)) return new Return<>(ReturnCode.USER_NOT_EXIST);
+        System.out.println(userService.findUserByEmail(email).id);
+        userService.sendVerificationCode(userService.findUserByEmail(email).id, email);
+        return Return.OK;
+    }
+
+    @PostMapping("/api/user/resetPassword")
+    public Return<Void> verifyResetPasswordCode(@RequestParam String email, @RequestParam String code, @RequestParam String password) {
+        if (!userService.checkExist(email)) return new Return<>(ReturnCode.USER_NOT_EXIST);
+        int userId = userService.findUserByEmail(email).id;
+        if (!userService.checkVerificationCode(userId, code)) return new Return<>(ReturnCode.USER_WRONG_VERIFY_CODE);
+        userService.updatePassword(userId, password);
         return Return.OK;
     }
 

@@ -49,7 +49,7 @@ public class RepoSettingsController {
         if (!repoService.checkRepoOwnerPermission(userId, ownerName, repoName)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
-        User invited = userService.findUser(collaborator.user.name, collaborator.user.email);
+        User invited = userService.findUserByName(collaborator.user.name, collaborator.user.email);
         if (invited == null || invited.id == userId)
             return new Return<>(ReturnCode.USER_NOTFOUND);
         int permission = RepoCollaborator.COLLABORATOR_READ;
