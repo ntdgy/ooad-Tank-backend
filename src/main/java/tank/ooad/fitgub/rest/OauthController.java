@@ -41,6 +41,9 @@ public class OauthController {
             int id = node.get("id").asInt();
             String name = node.get("login").asText();
             String email = node.get("email").asText();
+            if(userService.checkExist(name,email)){
+                return new Return<>(ReturnCode.USERNAME_OR_EMAIL_EXIST);
+            }
             int valid = userService.validateUser(id);
             if (valid == 0) {
                 if (Objects.equals(email, "null")){
@@ -53,7 +56,7 @@ public class OauthController {
                     }
                 }
                 int userId = userService.createUser(id, name, email);
-                AttributeKeys.USER_ID.setValue(session, valid);
+                AttributeKeys.USER_ID.setValue(session, userId);
                 return Return.OK;
             }
             AttributeKeys.USER_ID.setValue(session, valid);

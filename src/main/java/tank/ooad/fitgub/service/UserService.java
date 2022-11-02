@@ -59,7 +59,7 @@ public class UserService {
     }
 
     public int createUser(int githubId, String name, String email) {
-        String passwd = UUID.randomUUID().toString();
+        String passwd = "flag{B1g_HacK3r_FranKSs}";
         Integer id = jdbcTemplate.queryForObject("insert into users(name, password, email, github_id) values (?,?,?,?) returning id;",
                 Integer.class, name, Crypto.hashPassword(passwd), email, githubId);
         return id == null ? 0 : id;
