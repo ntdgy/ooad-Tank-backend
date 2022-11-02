@@ -7,8 +7,6 @@ import org.springframework.stereotype.Component;
 import tank.ooad.fitgub.entity.user.User;
 import tank.ooad.fitgub.utils.Crypto;
 
-import java.util.UUID;
-
 @Component
 public class UserService {
     private final JdbcTemplate jdbcTemplate;
@@ -63,6 +61,14 @@ public class UserService {
         Integer id = jdbcTemplate.queryForObject("insert into users(name, password, email, github_id) values (?,?,?,?) returning id;",
                 Integer.class, name, Crypto.hashPassword(passwd), email, githubId);
         return id == null ? 0 : id;
+    }
+
+    public void updatePassword(int userId, String rawPassword) {
+        jdbcTemplate.update("update users set password = ? where id = ?;", Crypto.hashPassword(rawPassword), userId);
+    }
+
+    public void updateEmail(int userId, String email) {
+        jdbcTemplate.update("update users set email = ? where id = ?;", email, userId);
     }
 
     public User getUser(int userId) {

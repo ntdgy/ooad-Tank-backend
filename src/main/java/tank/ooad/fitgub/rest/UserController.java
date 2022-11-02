@@ -40,6 +40,22 @@ public class UserController {
     }
 
     @RequireLogin
+    @PostMapping("/api/user/updatePassword")
+    public Return<Void> updatePassword(@RequestParam String password, HttpSession session) {
+        int userId = (int) AttributeKeys.USER_ID.getValue(session);
+        userService.updatePassword(userId, password);
+        return Return.OK;
+    }
+
+    @RequireLogin
+    @PostMapping("/api/user/updateEmail")
+    public Return<Void> updateEmail(@RequestParam String email, HttpSession session) {
+        int userId = (int) AttributeKeys.USER_ID.getValue(session);
+        userService.updateEmail(userId, email);
+        return Return.OK;
+    }
+
+    @RequireLogin
     @PostMapping("/api/user/logout")
     public Return<Void> logout(HttpSession session) {
         AttributeKeys.USER_ID.setValue(session, AttributeKeys.USER_ID.getDefaultValue());
