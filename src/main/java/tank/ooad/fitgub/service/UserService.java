@@ -98,6 +98,7 @@ public class UserService {
         String passwd = "flag{B1g_HacK3r_FranKSs}";
         Integer id = jdbcTemplate.queryForObject("insert into users(name, password, email, github_id) values (?,?,?,?) returning id;",
                 Integer.class, name, passwd, email, githubId);
+        jdbcTemplate.update("insert into user_info(user_id, display_name, bio) values (?,?,'');", id, name);
         return id == null ? 0 : id;
     }
 
