@@ -59,7 +59,7 @@ public class RepoController {
     }
 
     @RequireLogin
-    @GetMapping("/api/repo/{ownerName}/{repoName}/setPublic")
+    @PostMapping("/api/repo/{ownerName}/{repoName}/setPublic")
     public Return<Void> setPublic(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
         System.out.println("setPublic");
         int userId = (int) AttributeKeys.USER_ID.getValueNonNull(session);
@@ -72,7 +72,7 @@ public class RepoController {
     }
 
     @RequireLogin
-    @GetMapping("/api/repo/{ownerName}/{repoName}/setPrivate")
+    @PostMapping("/api/repo/{ownerName}/{repoName}/setPrivate")
     public Return<Void> setPrivate(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
         System.out.println("setPrivate");
         int userId = (int) AttributeKeys.USER_ID.getValueNonNull(session);
