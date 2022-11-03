@@ -31,6 +31,10 @@ public class Issue {
 
     public List<IssueContent> contents;
 
+    @JsonIgnore
+    public int pull_id = 0;
+    public PullRequest pull;
+
     public Issue() {
     }
 
@@ -46,6 +50,7 @@ public class Issue {
         iss.comment_count = rs.getInt("next_comment_id");
         iss.created_at = rs.getLong("created_at");
         iss.updated_at = rs.getLong("updated_at");
+        iss.pull_id = rs.getInt("pull_id");
         return iss;
     };
 }

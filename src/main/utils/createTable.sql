@@ -120,6 +120,7 @@ create table issue
     status          text    default 'open'::text                                  not null,
     tag             text    default ''::text,
     created_at      bigint  default (EXTRACT(epoch FROM now()) * (1000)::numeric) not null,
+    pr_id           int     null references pull_requests(id),
     constraint issue_repo_id_repo_issue_id_key
         unique (repo_id, repo_issue_id)
 );
@@ -157,19 +158,7 @@ create table pull_requests
             references repo
             on update cascade on delete cascade,
     from_branch     text                                                          not null,
-    to_branch       text                                                          not null,
-    repo_pr_id      integer                                                       not null,
-    prer_user_id    integer                                                       not null
-        constraint pull_requests_prer_user_id_fkey
-            references users
-            on update cascade on delete cascade,
-    next_comment_id integer default 1                                             not null,
-    title           text                                                          not null,
-    status          text    default 'open'::text                                  not null,
-    tag             text,
-    created_at      bigint  default (EXTRACT(epoch FROM now()) * (1000)::numeric) not null,
-    constraint pull_requests_to_repo_id_repo_pr_id_key
-        unique (to_repo_id, repo_pr_id)
+    to_branch       text                                                          not null
 );
 
 

@@ -59,7 +59,6 @@ public class RepoIssueController {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
         var issue = repoIssueService.getIssue(repo.id, repoIssueId);
-        repoIssueService.loadContents(issue);
         return new Return<>(ReturnCode.OK, issue);
     }
 
