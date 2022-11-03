@@ -1,9 +1,11 @@
 package tank.ooad.fitgub.entity.repo;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.jdbc.core.RowMapper;
 import org.jetbrains.annotations.Nullable;
 import tank.ooad.fitgub.entity.user.User;
+import tank.ooad.fitgub.utils.MyConfig;
 
 import java.util.List;
 
@@ -20,6 +22,10 @@ public class RepoMetaData {
     public int forked_from_id;
     public @Nullable Repo forked_from;
 
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public String getGitUrl() {
+        return String.format("%s/%s/%s.git", MyConfig.GIT_HTTP_SERVER_BASE, owner.name, name);
+    }
     public RepoMetaData() {
     }
 
