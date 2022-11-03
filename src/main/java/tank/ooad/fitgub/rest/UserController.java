@@ -81,7 +81,7 @@ public class UserController {
     public Return<Void> verifyResetPasswordCode(@RequestParam String email, @RequestParam String code, @RequestParam String password) {
         if (!userService.checkExist(email)) return new Return<>(ReturnCode.USER_NOT_EXIST);
         int userId = userService.findUserByEmail(email).id;
-        if (!userService.checkVerificationCode(userId, code)) return new Return<>(ReturnCode.USER_WRONG_VERIFY_CODE);
+        if (!userService.checkVerificationCode(userId, code)) return new Return<>(ReturnCode.USER_INVALID_VERIFY_CODE);
         userService.updatePassword(userId, password);
         return Return.OK;
     }
