@@ -68,7 +68,7 @@ public class RepoIssueService {
                         returning issue.id as id;""",
                 Integer.class,
                 repoId, repoIssueId, IssuerId, title, tag);
-        return issueId == null ? 0 : issueId;
+        return issueId == null ? 0 : issueId + 1;
     }
 
     public int insertIssueContent(int issueId, int senderUserId, IssueContent content) {
