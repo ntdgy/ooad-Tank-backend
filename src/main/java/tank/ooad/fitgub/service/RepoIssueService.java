@@ -1,14 +1,19 @@
 package tank.ooad.fitgub.service;
 
+import cn.hutool.core.lang.Pair;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.stereotype.Component;
 import tank.ooad.fitgub.entity.repo.Issue;
 import tank.ooad.fitgub.entity.repo.IssueContent;
 import tank.ooad.fitgub.entity.repo.PullRequest;
 import tank.ooad.fitgub.entity.repo.Repo;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
 
 
@@ -47,7 +52,7 @@ public class RepoIssueService {
     private int getIssueNextCommentId(int issueId) {
         var nextCommentId = jdbcTemplate.queryForObject(
                 "update issue set next_comment_id = issue.next_comment_id + 1 " +
-                "where id = ? returning next_comment_id;",
+                        "where id = ? returning next_comment_id;",
                 Integer.class, issueId);
         return nextCommentId == null ? -1 : nextCommentId;
     }
@@ -60,15 +65,17 @@ public class RepoIssueService {
      * @param tag issue tag
      * @return created issue id
      */
-    public int createIssue(int repoId, String title, int IssuerId, String tag) {
+    public Pair<Integer, Integer> createIssue(int repoId, String title, int IssuerId, String tag) {
         var repoIssueId = getRepoNextIssueId(repoId);
-        Integer issueId = jdbcTemplate.queryForObject("""
+        return jdbcTemplate.query("""
                         insert into issue(repo_id, repo_issue_id, issuer_user_id, title, tag)
                         values (?,?,?,?,?)
-                        returning issue.id as id;""",
-                Integer.class,
+                        returning issue.id, issue.repo_issue_id;""",
+                rs -> {
+                    rs.next();
+                    return new Pair<>(rs.getInt(1), rs.getInt(2));
+                },
                 repoId, repoIssueId, IssuerId, title, tag);
-        return issueId == null ? 0 : issueId + 1;
     }
 
     public int insertIssueContent(int issueId, int senderUserId, IssueContent content) {
@@ -115,29 +122,30 @@ public class RepoIssueService {
 
     /**
      * Get Issue with full Contents
+     *
      * @param repoId
      * @param repoIssueId
      * @return
      */
     public Issue getIssue(int repoId, int repoIssueId) {
         var iss = jdbcTemplate.queryForObject("""
-                    select issue.id,
-                           issue.repo_issue_id,
-                           issue.title,
-                           issue.status,
-                           issue.tag,
-                           issue.created_at,
-                           issue.next_comment_id,
-                           issue.pull_id,
-                           (select ic.created_at from issue_content ic where ic.issue_id = issue.id order by ic.comment_id desc limit 1) as updated_at,
-                           ui.id    as issuer_id,
-                           ui.name  as issuer_name,
-                           ui.email as issuer_email
-                    from issue
-                             join users ui on issue.issuer_user_id = ui.id
-                    where issue.repo_id = ?
-                      and issue.repo_issue_id = ?;
-                        """,
+                        select issue.id,
+                               issue.repo_issue_id,
+                               issue.title,
+                               issue.status,
+                               issue.tag,
+                               issue.created_at,
+                               issue.next_comment_id,
+                               issue.pull_id,
+                               (select ic.created_at from issue_content ic where ic.issue_id = issue.id order by ic.comment_id desc limit 1) as updated_at,
+                               ui.id    as issuer_id,
+                               ui.name  as issuer_name,
+                               ui.email as issuer_email
+                        from issue
+                                 join users ui on issue.issuer_user_id = ui.id
+                        where issue.repo_id = ?
+                          and issue.repo_issue_id = ?;
+                            """,
                 Issue.mapper,
                 repoId, repoIssueId);
         if (iss == null) throw new RuntimeException(); // TODO: Use NotExistException
@@ -147,79 +155,80 @@ public class RepoIssueService {
 
     public List<Issue> listIssues(int repoId) {
         return jdbcTemplate.query("""
-                select issue.id,
-                       issue.repo_issue_id,
-                       issue.title,
-                       issue.status,
-                       issue.tag,
-                       issue.created_at,
-                       issue.next_comment_id,
-                       issue.pull_id,
-                       (select ic.created_at from issue_content ic where ic.issue_id = issue.id order by ic.comment_id desc limit 1) as updated_at,
-                       ui.id    as issuer_id,
-                       ui.name  as issuer_name,
-                       ui.email as issuer_email
-                from issue
-                         join users ui on issue.issuer_user_id = ui.id
-                where issue.repo_id = ? and issue.pull_id is NULL
-                order by issue.id desc;
-                        """,
+                        select issue.id,
+                               issue.repo_issue_id,
+                               issue.title,
+                               issue.status,
+                               issue.tag,
+                               issue.created_at,
+                               issue.next_comment_id,
+                               issue.pull_id,
+                               (select ic.created_at from issue_content ic where ic.issue_id = issue.id order by ic.comment_id desc limit 1) as updated_at,
+                               ui.id    as issuer_id,
+                               ui.name  as issuer_name,
+                               ui.email as issuer_email
+                        from issue
+                                 join users ui on issue.issuer_user_id = ui.id
+                        where issue.repo_id = ? and issue.pull_id is NULL
+                        order by issue.id desc;
+                                """,
                 Issue.mapper,
                 repoId);
     }
 
     public List<Issue> listPulls(int repoId) {
         return jdbcTemplate.query("""
-                select issue.id,
-                       issue.repo_issue_id,
-                       issue.title,
-                       issue.status,
-                       issue.tag,
-                       issue.created_at,
-                       issue.next_comment_id,
-                       issue.pull_id,
-                       (select ic.created_at from issue_content ic where ic.issue_id = issue.id order by ic.comment_id desc limit 1) as updated_at,
-                       ui.id    as issuer_id,
-                       ui.name  as issuer_name,
-                       ui.email as issuer_email
-                from issue
-                         join users ui on issue.issuer_user_id = ui.id
-                where issue.repo_id = ? and issue.pull_id is not NULL
-                order by issue.id desc;
-                        """,
+                        select issue.id,
+                               issue.repo_issue_id,
+                               issue.title,
+                               issue.status,
+                               issue.tag,
+                               issue.created_at,
+                               issue.next_comment_id,
+                               issue.pull_id,
+                               (select ic.created_at from issue_content ic where ic.issue_id = issue.id order by ic.comment_id desc limit 1) as updated_at,
+                               ui.id    as issuer_id,
+                               ui.name  as issuer_name,
+                               ui.email as issuer_email
+                        from issue
+                                 join users ui on issue.issuer_user_id = ui.id
+                        where issue.repo_id = ? and issue.pull_id is not NULL
+                        order by issue.id desc;
+                                """,
                 Issue.mapper,
                 repoId);
     }
 
     /**
      * Get Pull Request with full content
+     *
      * @param repoId
      * @param repoPullId
      * @return
      */
     public Issue getPull(int repoId, int repoPullId) {
         var iss = jdbcTemplate.queryForObject("""
-                    select issue.id,
-                           issue.repo_issue_id,
-                           issue.title,
-                           issue.status,
-                           issue.tag,
-                           issue.created_at,
-                           issue.next_comment_id,
-                           issue.pull_id,
-                           (select ic.created_at from issue_content ic where ic.issue_id = issue.id order by ic.comment_id desc limit 1) as updated_at,
-                           ui.id    as issuer_id,
-                           ui.name  as issuer_name,
-                           ui.email as issuer_email
-                    from issue
-                             join users ui on issue.issuer_user_id = ui.id
-                    where issue.repo_id = ?
-                      and issue.repo_issue_id = ?
-                      and issue.pull_id is not NULL;
-                    """,
+                        select issue.id,
+                               issue.repo_issue_id,
+                               issue.title,
+                               issue.status,
+                               issue.tag,
+                               issue.created_at,
+                               issue.next_comment_id,
+                               issue.pull_id,
+                               (select ic.created_at from issue_content ic where ic.issue_id = issue.id order by ic.comment_id desc limit 1) as updated_at,
+                               ui.id    as issuer_id,
+                               ui.name  as issuer_name,
+                               ui.email as issuer_email
+                        from issue
+                                 join users ui on issue.issuer_user_id = ui.id
+                        where issue.repo_id = ?
+                          and issue.repo_issue_id = ?
+                          and issue.pull_id is not NULL;
+                        """,
                 Issue.mapper,
                 repoId, repoPullId);
-        if(iss==null) throw new RuntimeException(); // TODO
+        if (iss == null) throw new RuntimeException(); // TODO
         loadContents(iss);
         loadPull(iss);
         return iss;

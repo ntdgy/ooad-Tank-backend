@@ -39,11 +39,12 @@ public class RepoIssueController {
         if (!repoService.checkRepoReadPermission(repo, userId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
-        int issueId = repoIssueService.createIssue(repo.id, issue.title, userId, tag);
+        var issueIds = repoIssueService.createIssue(repo.id, issue.title, userId, tag);
+        int issueId = issueIds.getKey();
         for (var content : issue.contents) {
             repoIssueService.insertIssueContent(issueId, userId, content);
         }
-        return new Return<>(ReturnCode.OK, issueId);
+        return new Return<>(ReturnCode.OK, issueIds.getValue());
     }
 
     @GetMapping("/api/repo/{ownerName}/{repoName}/issue/{repoIssueId}")
