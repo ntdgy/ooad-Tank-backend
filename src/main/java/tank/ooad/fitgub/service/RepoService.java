@@ -35,9 +35,9 @@ public class RepoService {
      * @param userId
      * @return true if duplicated
      */
-    public boolean checkRepoDuplicate(Repo repo, int userId) {
+    public boolean checkRepoDuplicate(String repoName, int userId) {
         int cnt = template.queryForObject("select count(*) from repo join user_repo ur on repo.id = ur.repo_id\n" +
-                "where repo.name = ? and ur.user_id = ?;", Integer.class, repo.name, userId);
+                "where repo.name = ? and ur.user_id = ?;", Integer.class, repoName, userId);
         return cnt != 0;
     }
 
@@ -183,6 +183,12 @@ public class RepoService {
                 """, collaboratorUserId, permission, ownerUserId, repoName, permission);
     }
 
+    public void removeRepoCollaborator(int ownerUserId, String repoName, int collaboratorUserId) {
+        template.update("""
+                delete from user_repo where user_repo.repo_id = (select id from repo where repo.name = ? and repo.owner_id = ?) and user_repo.user_id = ?
+                """, repoName, ownerUserId, collaboratorUserId);
+    }
+
     public Repo getRepo(int userId, String repoName) {
         try {
             return template.queryForObject("""
@@ -250,9 +256,9 @@ public class RepoService {
         if (status.description == null) return false; // Illegal data
         return template.update("""
                 update  repo
-                set description = ?
+                set description = ?, forked_from_id = ?
                 where repo.id = ?
-                """, status.description, repo.id) == 1;
+                """, status.description, status.forked_from_id, repo.id) == 1;
     }
 
     public int starRepo(int userId, int repoId) {

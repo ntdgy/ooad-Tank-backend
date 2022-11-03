@@ -2,6 +2,7 @@ package tank.ooad.fitgub.rest;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+import tank.ooad.fitgub.entity.git.GitRepo;
 import tank.ooad.fitgub.entity.repo.Repo;
 import tank.ooad.fitgub.entity.repo.RepoMetaData;
 import tank.ooad.fitgub.exception.GitRepoNonExistException;
@@ -13,6 +14,7 @@ import tank.ooad.fitgub.utils.ReturnCode;
 import tank.ooad.fitgub.utils.permission.RequireLogin;
 
 import javax.servlet.http.HttpSession;
+import javax.xml.transform.OutputKeys;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,7 +35,7 @@ public class RepoController {
     public Return<Void> createRepo(@RequestBody Repo repo, HttpSession session) {
         int userId = (int) AttributeKeys.USER_ID.getValueNonNull(session);
 
-        if (repoService.checkRepoDuplicate(repo, userId)) return new Return<>(ReturnCode.REPO_DUPLICATED);
+        if (repoService.checkRepoDuplicate(repo.name, userId)) return new Return<>(ReturnCode.REPO_DUPLICATED);
         int repoId = repoService.createRepo(repo, userId);
         var createdRepo = repoService.getRepo(userId, repo.name);
         try {
@@ -103,7 +105,7 @@ public class RepoController {
         if (!repoService.checkRepoWritePermission(repo, userId)) {
             return new Return<>(ReturnCode.REPO_NO_PERMISSION);
         }
-        return new Return<>(ReturnCode.OK,repoService.updateRepoMetaData(repo, repoMetaData));
+        return new Return<>(ReturnCode.OK, repoService.updateRepoMetaData(repo, repoMetaData));
     }
 
     @RequireLogin
@@ -126,7 +128,7 @@ public class RepoController {
         Repo repository = repoService.getRepo(ownerName, repoName);
         if (repository == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
         if (!repository.isPublic() && currentUserId != 0
-                && !(repository.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
+            && !(repository.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
         var stars = repoService.unstarRepo(currentUserId, repository.id);
@@ -134,5 +136,30 @@ public class RepoController {
         return new Return<>(ReturnCode.OK, stars);
     }
 
+    @RequireLogin
+    @PostMapping("/api/repo/{ownerName}/{repoName}/fork")
+    public Return<Void> forkGitRepo(@PathVariable String ownerName, @PathVariable String repoName, @RequestBody Repo repo, HttpSession session) {
+        int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
+        Repo originRepo = repoService.getRepo(ownerName, repoName);
+        if (originRepo == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
+        if (!originRepo.isPublic() && currentUserId != 0
+            && !(originRepo.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
+            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+        }
+        if (repoService.checkRepoDuplicate(originRepo.name, currentUserId))
+            return new Return<>(ReturnCode.REPO_DUPLICATED);
+
+        var forkedRepo = repoService.getRepo(repoService.createRepo(repo, currentUserId));
+        var metaData = repoService.getRepoMetaData(forkedRepo);
+        metaData.forked_from_id = originRepo.id;
+        repoService.updateRepoMetaData(forkedRepo, metaData);
+        try {
+            gitOperation.forkGitRepo(originRepo, forkedRepo);
+        } catch (Exception e) {
+            repoService.dropRepo(forkedRepo.id);
+            throw new RuntimeException(e);
+        }
+        return Return.OK;
+    }
 
 }

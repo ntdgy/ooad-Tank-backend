@@ -1,6 +1,7 @@
 package tank.ooad.fitgub.git;
 
 import cn.hutool.core.io.CharsetDetector;
+import cn.hutool.core.io.FileUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.eclipse.jgit.internal.storage.file.FileRepository;
@@ -12,6 +13,7 @@ import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.springframework.stereotype.Component;
+import org.springframework.util.FileCopyUtils;
 import tank.ooad.fitgub.entity.git.*;
 import tank.ooad.fitgub.entity.repo.Repo;
 
@@ -36,6 +38,12 @@ public class GitOperation {
         var fileRepo = new FileRepository(repoPath);
         fileRepo.create(true);
         fileRepo.close();
+    }
+
+    public void forkGitRepo(Repo originRepo, Repo forkedRepo) throws IOException {
+        File origin = new File(REPO_STORE_PATH, String.format("%s/%s/", originRepo.owner.id, originRepo.id));
+        File forked = new File(REPO_STORE_PATH, String.format("%s/%s/", forkedRepo.owner.id, forkedRepo.id));
+        FileUtil.copyContent(origin, forked, false);
     }
 
     public void deleteGitRepo(Repo repo) throws IOException {

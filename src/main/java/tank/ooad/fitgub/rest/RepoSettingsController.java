@@ -12,8 +12,10 @@ import tank.ooad.fitgub.utils.ReturnCode;
 import tank.ooad.fitgub.utils.permission.RequireLogin;
 
 import javax.servlet.http.HttpSession;
+import javax.ws.rs.QueryParam;
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 public class RepoSettingsController {
@@ -44,7 +46,9 @@ public class RepoSettingsController {
      */
     @RequireLogin
     @PostMapping("/api/repo/{ownerName}/{repoName}/settings/collaborator")
-    public Return<List<RepoCollaborator>> addOrAlterCollaborators(@PathVariable String ownerName, @PathVariable String repoName, @RequestBody RepoCollaborator collaborator, HttpSession session) {
+    public Return<List<RepoCollaborator>> addOrAlterCollaborators(@PathVariable String ownerName, @PathVariable String repoName,
+                                                                  @RequestParam(required = false, name = "delete") Optional<Integer> delete,
+                                                                  @RequestBody RepoCollaborator collaborator, HttpSession session) {
         int userId = (int) AttributeKeys.USER_ID.getValue(session);
         if (!repoService.checkRepoOwnerPermission(userId, ownerName, repoName)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
@@ -52,9 +56,13 @@ public class RepoSettingsController {
         User invited = userService.findUserByName(collaborator.user.name, collaborator.user.email);
         if (invited == null || invited.id == userId)
             return new Return<>(ReturnCode.USER_NOTFOUND);
-        int permission = RepoCollaborator.COLLABORATOR_READ;
-        if (collaborator.canWrite) permission |= RepoCollaborator.COLLABORATOR_WRITE;
-        repoService.addRepoCollaborator(userId, repoName, invited.id, permission);
+        if (delete.isPresent()) {
+            repoService.removeRepoCollaborator(userId, repoName, invited.id);
+        } else {
+            int permission = RepoCollaborator.COLLABORATOR_READ;
+            if (collaborator.canWrite) permission |= RepoCollaborator.COLLABORATOR_WRITE;
+            repoService.addRepoCollaborator(userId, repoName, invited.id, permission);
+        }
         return new Return<>(ReturnCode.OK, repoService.getRepoCollaborators(userId, repoName));
     }
 

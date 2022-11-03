@@ -19,6 +19,7 @@ import tank.ooad.fitgub.utils.AttributeKeys;
 import tank.ooad.fitgub.utils.Return;
 import tank.ooad.fitgub.utils.ReturnCode;
 import tank.ooad.fitgub.utils.Utils;
+import tank.ooad.fitgub.utils.permission.RequireLogin;
 
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
