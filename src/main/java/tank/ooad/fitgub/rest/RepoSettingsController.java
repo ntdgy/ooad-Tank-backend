@@ -53,6 +53,7 @@ public class RepoSettingsController {
         if (!repoService.checkRepoOwnerPermission(userId, ownerName, repoName)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
+        // TODO: 判断user哪些参数应该唯一
         User invited = userService.findUserByName(collaborator.user.name, collaborator.user.email);
         if (invited == null || invited.id == userId)
             return new Return<>(ReturnCode.USER_NOTFOUND);
