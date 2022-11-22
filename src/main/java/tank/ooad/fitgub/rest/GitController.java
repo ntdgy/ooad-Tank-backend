@@ -1,15 +1,14 @@
 package tank.ooad.fitgub.rest;
 
-import cn.hutool.core.io.CharsetDetector;
-import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.util.HashUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import tank.ooad.fitgub.entity.git.GitBlob;
+import tank.ooad.fitgub.entity.git.GitPerson;
 import tank.ooad.fitgub.entity.git.GitRepo;
 import tank.ooad.fitgub.entity.git.GitTreeEntry;
 import tank.ooad.fitgub.entity.repo.Repo;
@@ -23,9 +22,9 @@ import tank.ooad.fitgub.utils.permission.RequireLogin;
 
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 @RestController
@@ -58,7 +57,7 @@ public class GitController {
 
         // checkPermission: require Read
         if (!repo.isPublic() && currentUserId != 0
-            && !(repo.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
+                && !(repo.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
         return new Return<>(ReturnCode.OK, gitOperation.getGitRepo(repo));
@@ -75,7 +74,7 @@ public class GitController {
         Repo repository = repoService.getRepo(ownerName, repoName);
         if (repository == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
         if (!repository.isPublic() && currentUserId != 0
-            && !(repository.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
+                && !(repository.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
         try {
@@ -98,7 +97,7 @@ public class GitController {
         Repo repository = repoService.getRepo(ownerName, repoName);
         if (repository == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
         if (!repository.isPublic() && currentUserId != 0
-            && !(repository.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
+                && !(repository.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
         try {
@@ -126,7 +125,7 @@ public class GitController {
         Repo repository = repoService.getRepo(ownerName, repoName);
         if (repository == null) return ResponseEntity.notFound().build();
         if (!repository.isPublic() && currentUserId != 0
-            && !(repository.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
+                && !(repository.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
             return ResponseEntity.notFound().build();
         }
         try {
@@ -141,4 +140,34 @@ public class GitController {
             throw new RuntimeException(e);
         }
     }
+
+    @PostMapping("/api/git/{ownerName}/{repoName}/upload")
+    @RequireLogin
+    public Return<String> uploadFile(@PathVariable String ownerName,
+                                     @PathVariable String repoName,
+                                     @RequestParam("file") MultipartFile file,
+                                     @RequestParam("branch") String branch,
+                                     @RequestParam("committerName") String committerName,
+                                     @RequestParam("committerEmail") String committerEmail,
+                                     @RequestParam("message") String message,
+                                     @RequestParam("path") String path,
+                                     HttpSession session) {
+        int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
+        Repo repository = repoService.getRepo(ownerName, repoName);
+        if (repository == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
+        if (!repoService.checkRepoWritePermission(repository,currentUserId)) {
+            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+        }
+        try {
+            GitPerson committer = new GitPerson(committerName, committerEmail);
+            Map<String, byte[]> contents = new HashMap<>();
+            contents.put(path, file.getBytes());
+            gitOperation.commit(repository,branch, committer, message, contents);
+            return new Return<>(ReturnCode.OK);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+
 }
