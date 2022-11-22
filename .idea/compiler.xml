@@ -10,9 +10,6 @@
         <module name="fitgub" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="ooad-Tank-backend" target="17" />
-    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
