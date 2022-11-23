@@ -173,128 +173,97 @@ public class GitOperation {
     }
 
     public GitCommit commit(
-            Repo repo,
-            String branchName,
-            GitPerson person,
-            String gitMessage,
-            Map<String, byte[]> contents
+            Repo repo, String branchName, GitPerson person, String gitMessage, Map<String, byte[]> contents
     ) {
         PersonIdent author = new PersonIdent(person.name, person.email);
-        GitCommit gitCommit = new GitCommit();
+        RevCommit revCommit;
         try {
             Repository repository = getRepository(repo);
             try (ObjectInserter odi = repository.newObjectInserter()) {
                 ObjectId headId = repository.resolve(branchName + "^{commit}");
                 DirCache index = createTemporaryIndex(repository, headId, contents);
-                if (index != null) {
-                    ObjectId indexTreeId = index.writeTree(odi);
+                assert index != null;
+                ObjectId indexTreeId = index.writeTree(odi);
+                odi.flush();
 
-                    CommitBuilder commit = new CommitBuilder();
-                    commit.setAuthor(author);
-                    commit.setCommitter(author);
-                    commit.setEncoding(StandardCharsets.UTF_8);
-                    commit.setMessage(gitMessage);
-                    if (headId != null) {
-                        commit.setParentId(headId);
-                    }
-                    commit.setTreeId(indexTreeId);
-                    ObjectId commitId = odi.insert(commit);
-                    odi.flush();
-                    try (RevWalk revWalk = new RevWalk(repository)) {
-                        RevCommit revCommit = revWalk.parseCommit(commitId);
-                        RefUpdate ru = repository.updateRef("refs/heads/" + branchName);
-                        if (headId == null) {
-                            ru.setExpectedOldObjectId(ObjectId.zeroId());
-                        } else {
-                            ru.setExpectedOldObjectId(headId);
-                        }
-                        ru.setNewObjectId(commitId);
-                        ru.setRefLogMessage("commit: " + revCommit.getShortMessage(), false);
-                        RefUpdate.Result rc = ru.forceUpdate();
-                        switch (rc) {
-                            case NEW:
-                            case FORCED:
-                            case FAST_FORWARD:
-                                break;
-                            case REJECTED:
-                            case LOCK_FAILURE:
-                                throw new ConcurrentRefUpdateException(JGitText.get().couldNotLockHEAD,
-                                        ru.getRef(),
-                                        rc);
-                            default:
-                                throw new JGitInternalException(MessageFormat.format(JGitText.get().updatingRefFailed,
-                                        Constants.HEAD,
-                                        commitId.toString(),
-                                        rc));
-                        }
-                        gitCommit.commit_time = new Date().getTime();
-                        gitCommit.commit_message = gitMessage;
-                        gitCommit.author = person;
-                        gitCommit.committer = xynhub;
-                        gitCommit.commit_hash = revCommit.getName();
-                    }
-                } else {
-                    throw new RuntimeException();
+                CommitBuilder commit = new CommitBuilder();
+                commit.setAuthor(author);
+                commit.setCommitter(author);
+                commit.setEncoding(StandardCharsets.UTF_8);
+                commit.setMessage(gitMessage);
+                if (headId != null) {
+                    commit.setParentId(headId);
                 }
+                commit.setTreeId(indexTreeId);
+                ObjectId commitId = odi.insert(commit);
+                odi.flush();
+                RevWalk revWalk = new RevWalk(repository);
+                revCommit = revWalk.parseCommit(commitId);
+                RefUpdate ru = repository.updateRef("refs/heads/" + branchName);
+                if (headId == null) {
+                    ru.setExpectedOldObjectId(ObjectId.zeroId());
+                } else {
+                    ru.setExpectedOldObjectId(headId);
+                }
+                ru.setNewObjectId(commitId);
+                ru.update();
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+        System.out.println(revCommit.getName());
+        GitCommit gitCommit = new GitCommit();
+        gitCommit.commit_time = revCommit.getCommitTime();
+        gitCommit.commit_message = gitMessage;
+        gitCommit.author = person;
+        gitCommit.committer = xynhub;
+        gitCommit.commit_hash = revCommit.getName();
         return gitCommit;
     }
 
     private static DirCache createTemporaryIndex(Repository repository, ObjectId headId, Map<String, byte[]> contents) {
-        Map<String, Pair<byte[], ObjectId>> paths = new HashMap<String, Pair<byte[], ObjectId>>(contents.size());
+        Map<String, ObjectId> fileObjects = new HashMap<>(contents.size());
         DirCache inCoreIndex = DirCache.newInCore();
         DirCacheEditor editor = inCoreIndex.editor();
         ObjectInserter inserter = repository.newObjectInserter();
         try {
             for (Map.Entry<String, byte[]> pathAndContent : contents.entrySet()) {
                 String gPath = pathAndContent.getKey();
-                paths.putAll(storePathsIntoHashMap(inserter,
-                        pathAndContent,
-                        gPath));
+                ObjectId objId = inserter.insert(Constants.OBJ_BLOB, pathAndContent.getValue());
+                fileObjects.put(gPath, objId);
             }
-            iterateOverTreeWalk(repository,
-                    headId,
+            System.out.println(fileObjects);
+            iterateOverTreeWalk(repository, headId,
                     (walkPath, hTree) -> {
-                        if (paths.containsKey(walkPath) && paths.get(walkPath).getValue().equals(hTree.getEntryObjectId())) {
-                            paths.remove(walkPath);
+                        System.out.println(walkPath);
+                        if (fileObjects.containsKey(walkPath) && fileObjects.get(walkPath).equals(hTree.getEntryObjectId())) {
+                            fileObjects.remove(walkPath);
                         }
-
-                        if (paths.get(walkPath) == null) {
-                            addToTemporaryInCoreIndex(editor,
-                                    walkPath,
-                                    hTree);
+                        if (fileObjects.get(walkPath) == null) {
+                            addToTemporaryInCoreIndex(editor, walkPath, hTree);
                         }
                     });
-
+            System.out.println(fileObjects);
+            fileObjects.forEach((path, objId) -> {
+                editor.add(new DirCacheEditor.PathEdit(path) {
+                    @Override
+                    public void apply(DirCacheEntry ent) {
+                        System.out.println("Apply Edit at Entry" + ent.getPathString());
+                        ent.setFileMode(FileMode.REGULAR_FILE);
+                        ent.setObjectId(objId);
+                    }
+                });
+            });
             editor.finish();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        if (paths.isEmpty()) {
+        if (fileObjects.isEmpty()) {
             return null;
         }
         return inCoreIndex;
     }
 
-    private static Map<String, Pair<byte[], ObjectId>> storePathsIntoHashMap(
-            ObjectInserter inserter,
-            Map.Entry<String, byte[]> pathAndContent,
-            String gpath
-    ) {
-        Map<String, Pair<byte[], ObjectId>> paths = new HashMap<>();
-        try {
-            ObjectId objectId = inserter.insert(Constants.OBJ_BLOB, pathAndContent.getValue());
-            paths.put(gpath, new Pair<>(pathAndContent.getValue(), objectId));
-            return paths;
-
-
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
 
     private static void iterateOverTreeWalk(Repository repository, ObjectId headId, BiConsumer<String, CanonicalTreeParser> consumer) {
         try {
@@ -308,18 +277,13 @@ public class GitOperation {
                     consumer.accept(walkPath, hTree);
                 }
                 treeWalk.close();
-
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    private static void addToTemporaryInCoreIndex(
-            DirCacheEditor editor,
-            String path,
-            CanonicalTreeParser hTree
-    ) {
+    private static void addToTemporaryInCoreIndex(DirCacheEditor editor, String path, CanonicalTreeParser hTree) {
         DirCacheEntry dcEntry = new DirCacheEntry(path);
         ObjectId objectId = hTree.getEntryObjectId();
         FileMode fileMode = hTree.getEntryFileMode();

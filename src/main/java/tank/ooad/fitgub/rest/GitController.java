@@ -161,7 +161,7 @@ public class GitController {
         try {
             GitPerson committer = new GitPerson(committerName, committerEmail);
             Map<String, byte[]> contents = new HashMap<>();
-            contents.put(path, file.getBytes());
+            contents.put(path + file.getOriginalFilename(), file.getBytes());
             gitOperation.commit(repository,branch, committer, message, contents);
             return new Return<>(ReturnCode.OK);
         } catch (Exception e) {
