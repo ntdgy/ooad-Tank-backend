@@ -8,6 +8,7 @@ import tank.ooad.fitgub.entity.repo.RepoCollaborator;
 import tank.ooad.fitgub.entity.repo.RepoMetaData;
 import tank.ooad.fitgub.exception.GitRepoNonExistException;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -310,5 +311,18 @@ public class RepoService {
 
     public void setPrivate(int repoId) {
         template.update("update repo set visible = ? where id = ?", Repo.VISIBLE_PRIVATE, repoId);
+    }
+
+    public ArrayList<Boolean> getUserRepoAction(int userId, int repoId){
+        var isStared = template.queryForObject("""
+                select count(*) from star where repo_id = ? and user_id = ?;
+                """, Integer.class, repoId, userId);
+        var isWatched = template.queryForObject("""
+                select count(*) from star where repo_id = ? and user_id = ?;""",
+                Integer.class,repoId,userId);
+        var returnList = new ArrayList<Boolean>();
+        returnList.add(isStared != null && isStared > 0);
+        returnList.add(isWatched != null && isWatched > 0);
+        return returnList;
     }
 }

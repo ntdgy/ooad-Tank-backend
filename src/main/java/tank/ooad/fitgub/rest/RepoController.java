@@ -162,4 +162,15 @@ public class RepoController {
         return Return.OK;
     }
 
+    @GetMapping("/api/repo/{ownerName}/{repoName}/actions")
+    public Return<List<Boolean>> getRepoActions(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
+        int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
+        Repo repo = repoService.getRepo(ownerName, repoName);
+        if (!repoService.checkRepoReadPermission(repo, currentUserId)) {
+            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+        }
+        var repoActions = repoService.getUserRepoAction(currentUserId, repo.id);
+        return new Return<>(ReturnCode.OK, repoActions);
+    }
+
 }
