@@ -146,9 +146,8 @@ public class RepoController {
             && !(originRepo.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
-        if (repoService.checkRepoDuplicate(originRepo.name, currentUserId))
-            return new Return<>(ReturnCode.REPO_DUPLICATED);
-
+        if (repoService.checkRepoDuplicate(repo.name, currentUserId))
+            return new Return<>(ReturnCode.GitRepoExist);
         var forkedRepo = repoService.getRepo(repoService.createRepo(repo, currentUserId));
         var metaData = repoService.getRepoMetaData(forkedRepo);
         metaData.forked_from_id = originRepo.id;

@@ -37,8 +37,7 @@ public class RepoService {
      * @return true if duplicated
      */
     public boolean checkRepoDuplicate(String repoName, int userId) {
-        int cnt = template.queryForObject("select count(*) from repo join user_repo ur on repo.id = ur.repo_id\n" +
-                "where repo.name = ? and ur.user_id = ?;", Integer.class, repoName, userId);
+        int cnt = template.queryForObject("select count(*) from repo where repo.name = ? and repo.owner_id = ?;", Integer.class, repoName, userId);
         return cnt != 0;
     }
 
