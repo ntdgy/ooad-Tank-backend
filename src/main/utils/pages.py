@@ -8,8 +8,8 @@ with open('User.json', 'r') as f:
     user = json.load(f)
 
 tokens = ['c6d0c20b-15b4-46f9-b7ef-b1ea54097b95']
-repo_base_address = '/home/dgy/github/repo-store'
-server_base_address = '/home/dgy/github/pages'
+repo_base_address = '/home/ooad/repo-store'
+server_base_address = '/home/ooad/pages'
 
 app = Flask(__name__)
 app.secret = os.urandom(24)
