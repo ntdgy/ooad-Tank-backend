@@ -9,6 +9,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import tank.ooad.fitgub.entity.user.User;
+import tank.ooad.fitgub.entity.user.UserInfo;
 
 import javax.annotation.Resource;
 import java.io.File;
@@ -74,11 +75,14 @@ public class UserInfoService {
         try {
             var avatarFile = new File(AVATAR_PATH + "/" + userId);
             Thumbnails.of(avatar.getInputStream()).outputFormat("jpg").size(512, 512).toFile(avatarFile);
-        }
-        catch (net.coobird.thumbnailator.tasks.UnsupportedFormatException e) {
+        } catch (net.coobird.thumbnailator.tasks.UnsupportedFormatException e) {
             return false;
         }
         return true;
+    }
+
+    public UserInfo getUserInfo(int userId) {
+        return jdbcTemplate.queryForObject("select * from user_info where user_id = ?", UserInfo.mapper, userId);
     }
 
 }

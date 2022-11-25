@@ -8,7 +8,7 @@ public enum ReturnCode {
     NOT_IMPLEMENTED(-1, "not implemented!"),
     LOGIN_REQUIRED(-2, "login required"),
 
-    USER_NOTFOUND(-1000, "user is not found."),
+    USER_NOT_FOUND(-1000, "user is not found."),
     USER_REGISTERED(-1001, "user is already registered."),
     USER_ALREADY_LOGIN(-1002, "already login"),
     USER_AUTH_FAILED(-1003, "auth failed"),

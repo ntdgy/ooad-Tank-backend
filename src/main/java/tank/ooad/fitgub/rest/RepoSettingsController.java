@@ -14,7 +14,6 @@ import tank.ooad.fitgub.utils.ReturnCode;
 import tank.ooad.fitgub.utils.permission.RequireLogin;
 
 import javax.servlet.http.HttpSession;
-import javax.ws.rs.QueryParam;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -58,7 +57,7 @@ public class RepoSettingsController {
         // TODO: 判断user哪些参数应该唯一
         User invited = userService.findUserByName(collaborator.user.name, collaborator.user.email);
         if (invited == null || invited.id == userId)
-            return new Return<>(ReturnCode.USER_NOTFOUND);
+            return new Return<>(ReturnCode.USER_NOT_FOUND);
         if (delete.isPresent()) {
             repoService.removeRepoCollaborator(userId, repoName, invited.id);
         } else {

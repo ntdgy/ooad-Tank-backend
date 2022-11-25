@@ -8,6 +8,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import tank.ooad.fitgub.entity.user.User;
+import tank.ooad.fitgub.entity.user.UserInfo;
 import tank.ooad.fitgub.service.UserInfoService;
 import tank.ooad.fitgub.service.UserService;
 import tank.ooad.fitgub.utils.AttributeKeys;
@@ -40,6 +41,14 @@ public class UserInfoController {
         return ResponseEntity.ok().body(userInfoService.getAvatar(user.id));
     }
 
+    @GetMapping("/api/userinfo/{userName}")
+    public Return<UserInfo> getUserInfo(@PathVariable String userName) {
+        User user = userService.findUserByName(userName);
+        if (user == null)
+            return new Return<>(ReturnCode.USER_NOT_FOUND);
+        return new Return<>(ReturnCode.OK, userInfoService.getUserInfo(user.id));
+    }
+
     @RequireLogin
     @PostMapping("/api/userinfo/updateUrl")
     public Return<Void> updateUrl(@RequestParam String url, HttpSession session) {
@@ -66,7 +75,7 @@ public class UserInfoController {
             return new Return<>(ReturnCode.LOGIN_REQUIRED);
         User user = userService.findUserByName(userName);
         if (user == null)
-            return new Return<>(ReturnCode.USER_NOTFOUND);
+            return new Return<>(ReturnCode.USER_NOT_FOUND);
         if (user.id != userId)
             return new Return<>(ReturnCode.USER_AUTH_FAILED);
         var success = userInfoService.setAvatar(userId, avatar);

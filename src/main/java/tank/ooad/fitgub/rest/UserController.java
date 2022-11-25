@@ -100,4 +100,11 @@ public class UserController {
         User user = userService.getUser(userId);
         return new Return<>(ReturnCode.OK, user);
     }
+
+    @GetMapping("/api/user/{userName}")
+    public Return<User> getUser(@PathVariable String userName) {
+        User user = userService.findUserByName(userName);
+        if (user == null) return new Return<>(ReturnCode.USER_NOT_EXIST);
+        return new Return<>(ReturnCode.OK, user);
+    }
 }
