@@ -1,15 +1,20 @@
 package tank.ooad.fitgub.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
 import tank.ooad.fitgub.entity.repo.Repo;
 import tank.ooad.fitgub.entity.repo.RepoCollaborator;
 import tank.ooad.fitgub.entity.repo.RepoMetaData;
 import tank.ooad.fitgub.exception.GitRepoNonExistException;
 
+import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class RepoService {
@@ -243,7 +248,8 @@ public class RepoService {
                        repo.stars          as repo_stars,
                        repo.forks          as repo_forks,
                        repo.watchs         as repo_watchers,
-                       repo.forked_from_id as forked_from_id
+                       repo.forked_from_id as forked_from_id,
+                       repo."hasPage" as hasPage           
                 from repo
                          join users uo on repo.owner_id = uo.id
                 where repo.id = ?;
@@ -325,5 +331,23 @@ public class RepoService {
         returnList.add(isStared != null && isStared > 0);
         returnList.add(isWatched != null && isWatched > 0);
         return returnList;
+    }
+
+    public void setRepoPageStatus(Repo repo, boolean status) {
+        template.update("""
+                update repo set "hasPage" = ? where id = ?
+                """, status, repo.id);
+        String url = "https://ooad.dgy.ac.cn/pages/api/configure";
+        RestTemplate restTemplate = new RestTemplate();
+        Map<String, String> map = new HashMap<>();
+        String token = "c6d0c20b-15b4-46f9-b7ef-b1ea54097b95";
+        map.put("token", token);
+        map.put("userId",Integer.toString(repo.owner.id));
+        map.put("repoId",Integer.toString(repo.id));
+        map.put("option",status?"enable":"disable");
+        map.put("userName",repo.owner.name);
+        map.put("repoName",repo.name);
+        var result = restTemplate.postForObject(url, map, String.class);
+        System.out.println(result);
     }
 }

@@ -131,7 +131,7 @@ public class RepoController {
         Repo repository = repoService.getRepo(ownerName, repoName);
         if (repository == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
         if (!repository.isPublic() && currentUserId != 0
-            && !(repository.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
+                && !(repository.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
         var stars = repoService.unstarRepo(currentUserId, repository.id);
@@ -146,7 +146,7 @@ public class RepoController {
         Repo originRepo = repoService.getRepo(ownerName, repoName);
         if (originRepo == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
         if (!originRepo.isPublic() && currentUserId != 0
-            && !(originRepo.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
+                && !(originRepo.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
         if (repoService.checkRepoDuplicate(repo.name, currentUserId))
@@ -175,5 +175,23 @@ public class RepoController {
         var repoActions = repoService.getUserRepoAction(currentUserId, repo.id);
         return new Return<>(ReturnCode.OK, repoActions);
     }
+
+    @RequireLogin
+    @PostMapping("/api/repo/{ownerName}/{repoName}/pages")
+    public Return<Boolean> setPagesUp(@PathVariable String ownerName, @PathVariable String repoName, @RequestParam boolean status, HttpSession session) {
+        int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
+        Repo repo = repoService.getRepo(ownerName, repoName);
+        if (repo == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
+        if (!repoService.checkRepoWritePermission(repo, currentUserId)) {
+            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+        }
+        var metaData = repoService.getRepoMetaData(repo);
+        if (metaData.hasPage == status) {
+            return new Return<>(ReturnCode.REPO_PAGE_ALREADY_EXIST);
+        }
+        repoService.setRepoPageStatus(repo, status);
+        return new Return<>(ReturnCode.OK, true);
+    }
+
 
 }
