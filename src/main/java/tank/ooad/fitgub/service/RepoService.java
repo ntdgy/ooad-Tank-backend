@@ -21,11 +21,13 @@ public class RepoService {
     }
 
     public int resolveRepo(String ownerName, String repoName) {
-        return template.queryForObject("""
+        Integer id = template.queryForObject("""
                 select repo.id from repo
                          join users uo on repo.owner_id = uo.id
                     where uo.name = ? and repo.name = ?;
                 """, Integer.class, ownerName, repoName);
+        if (id == null) throw new GitRepoNonExistException(ownerName, repoName);
+        return id;
     }
 
 
@@ -199,7 +201,7 @@ public class RepoService {
                     userId, repoName
             );
         } catch (EmptyResultDataAccessException e) {
-            return null;
+            throw new GitRepoNonExistException(userId + "", repoName);
         }
     }
 
@@ -213,7 +215,7 @@ public class RepoService {
                     ownerName, repoName
             );
         } catch (EmptyResultDataAccessException e) {
-            return null;
+            throw new GitRepoNonExistException(ownerName, repoName);
         }
     }
 
@@ -246,7 +248,7 @@ public class RepoService {
                          join users uo on repo.owner_id = uo.id
                 where repo.id = ?;
                 """, RepoMetaData.mapper, repo.id);
-        if (metaData!=null && metaData.forked_from_id != 0) {
+        if (metaData != null && metaData.forked_from_id != 0) {
             metaData.forked_from = getRepo(metaData.forked_from_id);
         }
         return metaData;
@@ -312,13 +314,13 @@ public class RepoService {
         template.update("update repo set visible = ? where id = ?", Repo.VISIBLE_PRIVATE, repoId);
     }
 
-    public ArrayList<Boolean> getUserRepoAction(int userId, int repoId){
+    public ArrayList<Boolean> getUserRepoAction(int userId, int repoId) {
         var isStared = template.queryForObject("""
                 select count(*) from star where repo_id = ? and user_id = ?;
                 """, Integer.class, repoId, userId);
         var isWatched = template.queryForObject("""
-                select count(*) from star where repo_id = ? and user_id = ?;""",
-                Integer.class,repoId,userId);
+                        select count(*) from star where repo_id = ? and user_id = ?;""",
+                Integer.class, repoId, userId);
         var returnList = new ArrayList<Boolean>();
         returnList.add(isStared != null && isStared > 0);
         returnList.add(isWatched != null && isWatched > 0);

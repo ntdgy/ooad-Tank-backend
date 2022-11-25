@@ -3,17 +3,14 @@ package tank.ooad.fitgub.service;
 import cn.hutool.core.lang.Pair;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.stereotype.Component;
 import tank.ooad.fitgub.entity.repo.Issue;
 import tank.ooad.fitgub.entity.repo.IssueContent;
 import tank.ooad.fitgub.entity.repo.PullRequest;
-import tank.ooad.fitgub.entity.repo.Repo;
+import tank.ooad.fitgub.exception.CustomException;
+import tank.ooad.fitgub.utils.ReturnCode;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.List;
 
 
@@ -22,6 +19,8 @@ import java.util.List;
 public class RepoIssueService {
     @Autowired
     private JdbcTemplate jdbcTemplate;
+    @Autowired
+    private RepoService repoService;
 
 
     /**
@@ -52,7 +51,7 @@ public class RepoIssueService {
     private int getIssueNextCommentId(int issueId) {
         var nextCommentId = jdbcTemplate.queryForObject(
                 "update issue set next_comment_id = issue.next_comment_id + 1 " +
-                        "where id = ? returning next_comment_id;",
+                "where id = ? returning next_comment_id;",
                 Integer.class, issueId);
         return nextCommentId == null ? -1 : nextCommentId;
     }
@@ -63,7 +62,7 @@ public class RepoIssueService {
      * @param title issue title
      * @param IssuerId issue issuer id
      * @param tag issue tag
-     * @return created issue id
+     * @return pair of <generated issue_id, repo issue id>
      */
     public Pair<Integer, Integer> createIssue(int repoId, String title, int IssuerId, String tag) {
         var repoIssueId = getRepoNextIssueId(repoId);
@@ -253,9 +252,16 @@ public class RepoIssueService {
     }
 
     private void loadPull(Issue iss) {
-        iss.pull = jdbcTemplate.queryForObject("""
-                select * from pull_requests where id = ?
-                """, PullRequest.mapper, iss.pull_id);
+        iss.pull = jdbcTemplate.queryForObject("select * from pull_requests where id = ?", PullRequest.mapper, iss.pull_id);
+        if (iss.pull == null) throw new CustomException(ReturnCode.SERVER_INTERNAL_ERROR);
+        iss.pull.from = repoService.getRepo(iss.pull.from_repo_id);
+        iss.pull.to = repoService.getRepo(iss.pull.to_repo_id);
+    }
+
+    public void insertPullRequest(int issueId, PullRequest pull) {
+        Integer pullId = jdbcTemplate.queryForObject("insert into pull_requests(from_repo_id, to_repo_id, from_branch, to_branch) values (?,?,?,?) returning id;",
+                Integer.class, pull.from.id, pull.to.id, pull.from_branch, pull.to_branch);
+        jdbcTemplate.update("update issue set pull_id = ? where issue.id=?", pullId, issueId);
     }
 }
 

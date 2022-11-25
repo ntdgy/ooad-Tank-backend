@@ -99,6 +99,12 @@ public class GitOperation {
         return gitRepo;
     }
 
+    public boolean checkBranchExistsInGitRepo(Repo repo, String branchName) throws IOException {
+        try (Repository repository = getRepository(repo)) {
+            return repository.getRefDatabase().getRefsByPrefix("refs/heads/").stream().anyMatch(ref -> ref.getName().equals("refs/heads/" + branchName));
+        }
+    }
+
     public List<GitTreeEntry> readGitTree(Repo repo,
                                           String Ref,
                                           String path) throws IOException {

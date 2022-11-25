@@ -8,8 +8,8 @@ public class PullRequest {
     @JsonIgnore
     public int id;
 
-    @JsonIgnore private int from_repo_id;
-    @JsonIgnore private int to_repo_id;
+    @JsonIgnore public int from_repo_id;
+    @JsonIgnore public int to_repo_id;
     public Repo from;
     public Repo to;
     public String from_branch;

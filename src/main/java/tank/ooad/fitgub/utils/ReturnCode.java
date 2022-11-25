@@ -7,7 +7,8 @@ public enum ReturnCode {
     OK(200, ""),
     NOT_IMPLEMENTED(-1, "not implemented!"),
     LOGIN_REQUIRED(-2, "login required"),
-
+    ILLEAL_ARGUMENTS(-3, "illegal arguments"),
+    SERVER_INTERNAL_ERROR(-500, "server internal error"),
     USER_NOT_FOUND(-1000, "user is not found."),
     USER_REGISTERED(-1001, "user is already registered."),
     USER_ALREADY_LOGIN(-1002, "already login"),

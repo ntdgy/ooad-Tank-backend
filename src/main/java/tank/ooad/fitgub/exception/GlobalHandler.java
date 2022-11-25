@@ -16,4 +16,10 @@ public class GlobalHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new Return<>(ReturnCode.LOGIN_REQUIRED, e.getPath()));
     }
+
+    @ExceptionHandler(CustomException.class)
+    public ResponseEntity<Return<Void>> handleCustomException(CustomException e) {
+        if (e.returnCode == ReturnCode.SERVER_INTERNAL_ERROR) return ResponseEntity.internalServerError().build();
+        return ResponseEntity.ok(new Return<>(e.returnCode));
+    }
 }
