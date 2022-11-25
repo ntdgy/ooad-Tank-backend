@@ -6,8 +6,8 @@ from email.header import Header
 
 SMTP_HOST_NAME = "smtp.office365.com"
 SMTP_PORT = 587
-SMTP_AUTH_USER = "ooad@dgy.ac.cn"
-SMTP_AUTH_PWD = "fc447471-1cb7-4914-b15f-daa7fd609255"
+SMTP_AUTH_USER = "no-reply@dgy.ac.cn"
+SMTP_AUTH_PWD = "dc611963-ac43-4906-a276-a319eb4fb243"
 
 
 class MyHandler(http.server.BaseHTTPRequestHandler):
