@@ -23,7 +23,8 @@ public enum ReturnCode {
     GitRepoExist(-2001, "Git Repo Exist."),
     GIT_REPO_NON_EXIST(-2002, "Git repo doesn't exists."),
     GIT_REPO_NO_PERMISSION(-2003, "no permission"),
-    GIT_BRANCH_NON_EXIST(-2004, "Requested branch does not exist"),
+    GIT_BRANCH_NON_EXIST(-2004, "Requested branch does not exist or it is already set"),
+    GIT_FILE_NON_EXIST(-2005, "Requested file doesn't exist."),
 
     ISSUE_INTERNAL_ERROR(-3000, "some internal error detected, please contact admins"),
     ISSUE_CLOSED(-3001, "issue closed"),

@@ -102,6 +102,7 @@ public class GitController {
         }
         try {
             var loader = gitOperation.getGitBlobLoader(repository, ref, path);
+            if (loader == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
             if (Utils.isBinaryFile(path) || loader.getSize() > 1024 * 1024L)
                 return new Return<>(ReturnCode.OK, new GitBlob(false, loader.getSize()));
             // too large file or binary file
