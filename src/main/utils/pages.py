@@ -8,8 +8,8 @@ with open('User.json', 'r') as f:
     user = json.load(f)
 
 tokens = ['c6d0c20b-15b4-46f9-b7ef-b1ea54097b95']
-repo_base_address = '/home/ooad/repo-store'
-server_base_address = '/home/ooad/pages'
+repo_base_address = '/home/dgy/github/repo-store'
+server_base_address = '/home/dgy/github/pages'
 
 app = Flask(__name__)
 app.secret = os.urandom(24)
@@ -22,6 +22,9 @@ def get_user_repo(username, reponame, path=None):
     print(username, reponame, path)
     if path is None or path == '':
         path = 'index.html'
+    if path.startswith('.git'):
+        response = flask.Response(status=403, response='Forbidden')
+        return response
     return flask.send_from_directory(f'''{server_base_address}/{username}/{reponame}/''', path)
     # serve with the folder in /username/reponame
 
@@ -67,4 +70,4 @@ def configure():
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(port=8082)
