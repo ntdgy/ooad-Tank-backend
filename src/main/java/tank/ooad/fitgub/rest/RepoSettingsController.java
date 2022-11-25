@@ -1,5 +1,7 @@
 package tank.ooad.fitgub.rest;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.web.bind.annotation.*;
 import tank.ooad.fitgub.entity.repo.RepoCollaborator;
 import tank.ooad.fitgub.entity.user.User;
@@ -77,6 +79,25 @@ public class RepoSettingsController {
         try {
             gitController.deleteGitRepo(repo);
             repoService.dropRepo(userId, repoName);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return Return.OK;
+    }
+
+    @RequireLogin
+    @PostMapping("/api/repo/{ownerName}/{repoName}/settings/default_branch")
+    public Return<Void> setRepoDefaultBranch(@PathVariable String ownerName, @PathVariable String repoName, @RequestBody String postBody, HttpSession session) {
+        int userId = (int) AttributeKeys.USER_ID.getValueNonNull(session);
+        if (!repoService.checkRepoOwnerPermission(userId, ownerName, repoName))
+            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+        var repo = repoService.getRepo(userId, repoName);
+        try {
+            JsonNode json = new ObjectMapper().readTree(postBody);
+            String name = json.get("name").asText();
+            if(!gitController.changeDefaultBranch(repo, name)) {
+                return new Return<>(ReturnCode.GIT_BRANCH_NON_EXIST);
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

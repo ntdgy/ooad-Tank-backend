@@ -4,7 +4,11 @@ import cn.hutool.core.io.CharsetDetector;
 import cn.hutool.core.io.FileUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
+import org.eclipse.jgit.api.CheckoutCommand;
+import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.GitCommand;
 import org.eclipse.jgit.api.errors.ConcurrentRefUpdateException;
+import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.JGitInternalException;
 import org.eclipse.jgit.dircache.DirCache;
 import org.eclipse.jgit.dircache.DirCacheEditor;
@@ -17,6 +21,7 @@ import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.eclipse.jgit.treewalk.TreeWalk;
+import org.eclipse.jgit.util.IO;
 import org.springframework.stereotype.Component;
 import tank.ooad.fitgub.entity.git.*;
 import tank.ooad.fitgub.entity.repo.Repo;
@@ -27,6 +32,8 @@ import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
+
 import cn.hutool.core.lang.Pair;
 
 
@@ -35,7 +42,7 @@ public class GitOperation {
 
     private static final String REPO_STORE_PATH = "../repo-store";
 
-    private static final GitPerson xynhub = new GitPerson("xynhub","ooad@dgy.ac.cn");
+    private static final GitPerson xynhub = new GitPerson("xynhub", "ooad@dgy.ac.cn");
 
     /***
      * Create RepoStore in disk.
@@ -298,4 +305,18 @@ public class GitOperation {
     }
 
 
+    public boolean changeDefaultBranch(Repo repo, String name) throws IOException {
+        Repository repository = getRepository(repo);
+        var branches = repository.getRefDatabase().getRefsByPrefix("refs/heads/");
+        for (Ref branch : branches) {
+            if (branch.getName().equals("refs/heads/" + name)) {
+                var refUpdate = repository.getRefDatabase().newUpdate(Constants.HEAD, false);
+                if (refUpdate.getRef().getTarget().getName().equals(branch.getName())) return false;
+                refUpdate.link("refs/heads/" + name);
+                refUpdate.update();
+                return true;
+            }
+        }
+        return false;
+    }
 }
