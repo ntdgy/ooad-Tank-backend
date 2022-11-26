@@ -344,6 +344,16 @@ public class RepoService {
                 """, Repo.mapper);
     }
 
+    public List<Repo> searchRepo(String keyword){
+        return template.query("""
+                select repo.id as repo_id, repo.name as repo_name, repo.visible as repo_visible,
+                       repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email
+                from repo
+                         join users uo on repo.owner_id = uo.id
+                where repo.name like ? or repo.description like ? and repo.visible = 0
+                """, Repo.mapper, "%" + keyword + "%", "%" + keyword + "%");
+    }
+
     public void setRepoPageStatus(Repo repo, boolean status) {
         template.update("""
                 update repo set "hasPage" = ? where id = ?

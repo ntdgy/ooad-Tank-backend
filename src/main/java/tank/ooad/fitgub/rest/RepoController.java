@@ -209,5 +209,10 @@ public class RepoController {
         return new Return<>(ReturnCode.OK, repoService.getRandomRepo());
     }
 
+    @PostMapping("/api/repo/search")
+    public Return<List<Repo>> searchRepo(@RequestParam String keyword) {
+        return new Return<>(ReturnCode.OK, repoService.searchRepo(keyword));
+    }
+
 
 }
