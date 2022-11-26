@@ -32,7 +32,7 @@ public class RepoMetaData {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     public String getPageUrl() {
         if(this.hasPage)
-            return String.format("%s/%s/%s.git", MyConfig.PAGE_HTTP_SERVER_BASE, owner.name, name);
+            return String.format("%s/%s/%s", MyConfig.PAGE_HTTP_SERVER_BASE, owner.name, name);
         else
             return null;
     }
