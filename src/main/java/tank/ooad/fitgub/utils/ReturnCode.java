@@ -18,6 +18,7 @@ public enum ReturnCode {
     USERNAME_OR_EMAIL_EXIST(-1006, "username or email already exist."),
     USER_NOT_EXIST(-1007, "user not exist."),
     USER_INVALID_VERIFY_CODE(-1008, "invalid verify code."),
+    OAUTH_BAD_VERIFICATION_CODE(-1009, "bad verification code."),
 
 
     GitAPIError(-2000, "Git API Error."),

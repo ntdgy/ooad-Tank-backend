@@ -32,6 +32,9 @@ public class OauthController {
         System.out.println(code);
         String accessToken = oauthService.accessToken(code);
         System.out.println(accessToken);
+        if (accessToken.equals("bad_verification_code")) {
+            return new Return<>(ReturnCode.OAUTH_BAD_VERIFICATION_CODE);
+        }
         String userInfo = oauthService.userInfo(accessToken);
         System.out.println(userInfo);
         ObjectMapper mapper = new ObjectMapper();
@@ -40,9 +43,9 @@ public class OauthController {
             int id = node.get("id").asInt();
             String name = node.get("login").asText();
             String email = node.get("email").asText();
-            if(userService.checkExist(name,email)){
-                return new Return<>(ReturnCode.USERNAME_OR_EMAIL_EXIST);
-            }
+//            if(userService.checkExist(name,email)){
+//                return new Return<>(ReturnCode.USERNAME_OR_EMAIL_EXIST);
+//            }
             int valid = userService.validateUser(id);
             if (valid == 0) {
                 if (Objects.equals(email, "null")){
