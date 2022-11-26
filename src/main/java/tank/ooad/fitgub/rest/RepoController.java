@@ -204,5 +204,10 @@ public class RepoController {
         return new Return<>(ReturnCode.OK, true);
     }
 
+    @GetMapping("/api/repo/suggest")
+    public Return<Repo> suggestRepo() {
+        return new Return<>(ReturnCode.OK, repoService.getRandomRepo());
+    }
+
 
 }
