@@ -86,6 +86,17 @@ public class RepoController {
         return Return.OK;
     }
 
+    @GetMapping("/api/repo/{ownerName}/{repoName}")
+    public Return<Repo> getRepo(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
+        int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
+        Repo repo = repoService.getRepo(ownerName, repoName);
+        if (!repoService.checkRepoReadPermission(repo, currentUserId)) {
+            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+        }
+        return new Return<>(ReturnCode.OK, repo);
+    }
+
+
     @GetMapping("/api/repo/{ownerName}/{repoName}/metaData")
     public Return<RepoMetaData> getRepoMetaData(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
