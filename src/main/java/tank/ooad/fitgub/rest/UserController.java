@@ -72,7 +72,11 @@ public class UserController {
     @PostMapping("/api/user/sendResetPasswordEmail")
     public Return<Void> resetPassword(@RequestParam String email) {
         if (!userService.checkExist(email)) return new Return<>(ReturnCode.USER_NOT_EXIST);
-        userService.sendVerificationCode(userService.findUserByEmail(email).id, email);
+        try {
+            userService.sendVerificationCode(userService.findUserByEmail(email).id, email);
+        }catch (Exception e){
+            return new Return<>(ReturnCode.USER_SEND_EMAIL_FAILED);
+        }
         return Return.OK;
     }
 

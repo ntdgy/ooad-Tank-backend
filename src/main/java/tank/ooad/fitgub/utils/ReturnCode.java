@@ -19,6 +19,7 @@ public enum ReturnCode {
     USER_NOT_EXIST(-1007, "user not exist."),
     USER_INVALID_VERIFY_CODE(-1008, "invalid verify code."),
     OAUTH_BAD_VERIFICATION_CODE(-1009, "bad verification code."),
+    USER_SEND_EMAIL_FAILED(-1010, "send email failed.You can try again later."),
 
 
     GitAPIError(-2000, "Git API Error."),
