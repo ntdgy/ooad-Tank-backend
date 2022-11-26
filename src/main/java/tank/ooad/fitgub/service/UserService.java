@@ -4,11 +4,13 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import tank.ooad.fitgub.entity.repo.Repo;
 import tank.ooad.fitgub.entity.user.User;
 import tank.ooad.fitgub.entity.user.VerificationCode;
 import tank.ooad.fitgub.utils.Crypto;
 
 import java.util.HashMap;
+import java.util.List;
 
 @Component
 public class UserService {
@@ -144,5 +146,15 @@ public class UserService {
         } catch (EmptyResultDataAccessException e) {
             return null;
         }
+    }
+
+    public List<Repo> getUserStaredRepos(int userId) {
+        return jdbcTemplate.query("""
+                select r.id as repo_id, r.name as repo_name,r.visible as repo_visible,
+                       r.owner_id as repo_owner_id, u.name as repo_owner_name, u.email as repo_owner_email from star
+                join repo r on r.id = star.repo_id and r.visible = 0
+                join users u on u.id = r.owner_id
+                where user_id = ?;
+                """, Repo.mapper, userId);
     }
 }

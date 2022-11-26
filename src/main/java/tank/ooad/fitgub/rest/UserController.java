@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
+import tank.ooad.fitgub.entity.repo.Repo;
 import tank.ooad.fitgub.entity.user.User;
 import tank.ooad.fitgub.service.UserService;
 import tank.ooad.fitgub.utils.AttributeKeys;
@@ -14,6 +15,7 @@ import tank.ooad.fitgub.utils.permission.RequireLogin;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -110,5 +112,12 @@ public class UserController {
         User user = userService.findUserByName(userName);
         if (user == null) return new Return<>(ReturnCode.USER_NOT_EXIST);
         return new Return<>(ReturnCode.OK, user);
+    }
+
+    @GetMapping("/api/user/{userName}/stars")
+    public Return<List<Repo>> getUserStars(@PathVariable String userName) {
+        User user = userService.findUserByName(userName);
+        if (user == null) return new Return<>(ReturnCode.USER_NOT_EXIST);
+        return new Return<>(ReturnCode.OK, userService.getUserStaredRepos(user.id));
     }
 }
