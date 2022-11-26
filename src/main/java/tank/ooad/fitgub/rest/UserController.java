@@ -120,4 +120,11 @@ public class UserController {
         if (user == null) return new Return<>(ReturnCode.USER_NOT_EXIST);
         return new Return<>(ReturnCode.OK, userService.getUserStaredRepos(user.id));
     }
+
+    @GetMapping("/api/user/{userName}/watches")
+    public Return<List<Repo>> getUserWatches(@PathVariable String userName) {
+        User user = userService.findUserByName(userName);
+        if (user == null) return new Return<>(ReturnCode.USER_NOT_EXIST);
+        return new Return<>(ReturnCode.OK, userService.getUserWatchedRepos(user.id));
+    }
 }
