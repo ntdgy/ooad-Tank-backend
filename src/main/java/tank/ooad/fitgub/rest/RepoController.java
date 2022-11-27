@@ -94,6 +94,7 @@ public class RepoController {
         if (!repoService.checkRepoReadPermission(repo, currentUserId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
+        repoService.fillStarAndWatch(repo, currentUserId);
         return new Return<>(ReturnCode.OK, repo);
     }
 

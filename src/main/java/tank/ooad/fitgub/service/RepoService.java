@@ -341,6 +341,15 @@ public class RepoService {
         returnList.add(isWatched != null && isWatched > 0);
         return returnList;
     }
+    public void fillStarAndWatch(Repo repo, int currentUserId) {
+        var resultSet = template.queryForRowSet("""
+               select (select count(*) from star as s where s.user_id = ? and s.repo_id = repo.id) as star,
+                (select count(*) from watch as w where w.user_id = ? and w.repo_id = repo.id) as watch
+               from repo where repo.id = ?
+               """, currentUserId, currentUserId, repo.id);
+        repo.starred = resultSet.getInt("star") != 0;
+        repo.watched = resultSet.getInt("watch") != 0;
+    }
 
     public Repo getRandomRepo() {
         return template.queryForObject("""
