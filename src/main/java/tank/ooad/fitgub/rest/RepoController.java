@@ -133,9 +133,9 @@ public class RepoController {
         if (!repoService.checkRepoReadPermission(repo, currentUserId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
-        var watches = repoService.watchRepo(currentUserId, repo.id);
-        if (watches == -1) return new Return<>(ReturnCode.REPO_ALREADY_STARRED);
-        return new Return<>(ReturnCode.OK, watches);
+        var stars = repoService.starRepo(currentUserId, repo.id);
+        if (stars == -1) return new Return<>(ReturnCode.REPO_ALREADY_STARRED);
+        return new Return<>(ReturnCode.OK, stars);
     }
 
     @RequireLogin
