@@ -243,7 +243,7 @@ public class RepoService {
                     repoId
             );
         } catch (EmptyResultDataAccessException e) {
-            return null;
+            throw new GitRepoNonExistException("", "" + repoId);
         }
     }
 

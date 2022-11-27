@@ -53,7 +53,6 @@ public class GitController {
 
         // Resolve Repo
         Repo repo = repoService.getRepo(ownerName, repoName);
-        if (repo == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
 
         // checkPermission: require Read
         if (!repo.isPublic() && currentUserId != 0

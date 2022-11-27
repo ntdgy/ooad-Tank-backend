@@ -103,11 +103,13 @@ public class RepoController {
     public Return<RepoMetaData> getRepoMetaData(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
         Repo repo = repoService.getRepo(ownerName, repoName);
-        if (repo == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
         if (!repoService.checkRepoReadPermission(repo, currentUserId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
         var repoMetaData = repoService.getRepoMetaData(repo);
+        repoService.fillStarAndWatch(repo, currentUserId);
+        repoMetaData.starred = repo.starred;
+        repoMetaData.watched = repo.watched;
         return new Return<>(ReturnCode.OK, repoMetaData);
     }
 
@@ -116,7 +118,6 @@ public class RepoController {
     public Return<Boolean> updateRepoMetaData(@RequestBody RepoMetaData repoMetaData, @PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
         int userId = (int) AttributeKeys.USER_ID.getValueNonNull(session);
         Repo repo = repoService.getRepo(ownerName, repoName);
-        if (repo == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
         if (!repoService.checkRepoWritePermission(repo, userId)) {
             return new Return<>(ReturnCode.REPO_NO_PERMISSION);
         }
@@ -128,7 +129,6 @@ public class RepoController {
     public Return<Integer> starRepo(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
         Repo repo = repoService.getRepo(ownerName, repoName);
-        if (repo == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
         if (!repoService.checkRepoReadPermission(repo, currentUserId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
@@ -181,7 +181,6 @@ public class RepoController {
     public Return<List<Boolean>> getRepoActions(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
         Repo repo = repoService.getRepo(ownerName, repoName);
-        if (repo == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
         if (!repoService.checkRepoReadPermission(repo, currentUserId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
@@ -194,7 +193,6 @@ public class RepoController {
     public Return<Boolean> setPagesUp(@PathVariable String ownerName, @PathVariable String repoName, @RequestParam boolean status, HttpSession session) {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
         Repo repo = repoService.getRepo(ownerName, repoName);
-        if (repo == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
         if (!repoService.checkRepoWritePermission(repo, currentUserId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }

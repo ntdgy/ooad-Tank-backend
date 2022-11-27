@@ -18,6 +18,9 @@ public class RepoMetaData {
     public int watch;
     public List<User> contributors = List.of();
 
+    public Boolean starred;
+    public Boolean watched;
+
     @JsonIgnore
     public int forked_from_id;
 
