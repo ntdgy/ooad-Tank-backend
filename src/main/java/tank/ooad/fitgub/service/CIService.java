@@ -27,7 +27,7 @@ public class CIService {
     private JdbcTemplate jdbcTemplate;
 
     @Async
-    public void runCI(int repoId, int userId, String ciName, InputStream inputStream) {
+    public void runCI(int repoId, int userId, String ciName, InputStream inputStream) throws IOException {
         Yaml yaml = new Yaml();
         try {
 //            InputStream inputStream = new FileInputStream(path);
@@ -86,6 +86,14 @@ public class CIService {
             return;
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
+        }catch (java.lang.NullPointerException e){
+            // get random 64 length string
+            String hash = String.valueOf(Math.random()).substring(2, 66);
+            OutputStream outputStream = new FileOutputStream("src/main/docker-log/" + hash + ".log");
+            outputStream.write("yaml file is not valid".getBytes());
+            outputStream.close();
+            jdbcTemplate.update("insert into ci_log (repo_id, user_id,ci_name,output_hash) values (?, ?, ?,?)", repoId, userId, ciName, hash);
+            CompletableFuture.completedFuture(Arrays.asList(hash));
         }
         CompletableFuture.completedFuture(null);
     }
