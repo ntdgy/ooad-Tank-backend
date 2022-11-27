@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.*;
 import tank.ooad.fitgub.entity.repo.Issue;
 import tank.ooad.fitgub.entity.repo.IssueContent;
 import tank.ooad.fitgub.entity.repo.Repo;
+import tank.ooad.fitgub.service.MailService;
 import tank.ooad.fitgub.service.RepoIssueService;
 import tank.ooad.fitgub.service.RepoService;
 import tank.ooad.fitgub.utils.AttributeKeys;
@@ -24,6 +25,9 @@ public class RepoIssueController {
     private RepoIssueService repoIssueService;
     @Autowired
     private RepoService repoService;
+
+    @Autowired
+    private MailService mailService;
 
     @RequireLogin
     @PostMapping("/api/repo/{ownerName}/{repoName}/issue/create")
@@ -44,6 +48,9 @@ public class RepoIssueController {
         for (var content : issue.contents) {
             repoIssueService.insertIssueContent(issueId, userId, content);
         }
+        List<String> receivers = repoService.getRepoWatchers(repo.id);
+        System.out.println(receivers);
+        mailService.sendNewIssueNotification(receivers, repo.name, issue.title);
         return new Return<>(ReturnCode.OK, issueIds.getValue());
     }
 
@@ -109,7 +116,7 @@ public class RepoIssueController {
             HttpSession session) {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
         int issueId = repoIssueService.resolveIssue(ownerName, repoName, repoIssueId);
-        if(issueId == -1){
+        if (issueId == -1) {
             return new Return<>(ReturnCode.ISSUE_NOT_EXIST);
         }
         var repo = repoService.getRepo(ownerName, repoName);

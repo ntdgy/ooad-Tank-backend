@@ -6,6 +6,7 @@ import jakarta.mail.internet.MimeMessage;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -24,8 +25,10 @@ public class MailService {
                 "content", content, "uuid", uuid);
 
         RestTemplate restTemplate = new RestTemplate();
-        String result = restTemplate.postForObject(url, map, String.class);
-        return result;
+        try{
+            String result = restTemplate.postForObject(url, map, String.class);
+            return result;}
+        catch (Exception ignored){}
 //        try {
 //            Properties props = new Properties();
 //            props.put("mail.smtp.host", SMTP_HOST_NAME);
@@ -56,6 +59,7 @@ public class MailService {
 //            e.printStackTrace();
 //            return e.getMessage();
 //        }
+        return "failed";
     }
 
     public String sendVerificationCode(String receiver, String code) {
@@ -67,6 +71,39 @@ public class MailService {
                 xynhub 🏳️‍⚧️ 🏳️‍🌈 团队敬上
                """.formatted(code);
         return sendMail(receiver, "xynhub 重置密码验证码", content);
+    }
+
+    public String sendStarNotification(String receiver, String fromUser, String repoName) {
+        String subject = "XynHub Star Notification";
+        String content = """
+                您关注的仓库 %s 被 %s Star 了！
+                xynhub 🏳️‍⚧️ 🏳️‍🌈 团队敬上
+               """.formatted(repoName, fromUser);
+        return sendMail(receiver, subject, content);
+    }
+
+    public String sendNewIssueNotification(List<String> receiver, String repoName, String issueTitle) {
+        String subject = "XynHub New Issue Notification";
+        String content = """
+                您关注的仓库 %s 有新的 Issue %s 了！
+                xynhub 🏳️‍⚧️ 🏳️‍🌈 团队敬上
+               """.formatted(repoName, issueTitle);
+        for (String to : receiver) {
+            sendMail(to, subject, content);
+        }
+        return "success";
+    }
+
+    public String sendNewPrNotification(List<String> receiver, String repoName, String prTitle) {
+        String subject = "XynHub New PR Notification";
+        String content = """
+                您的仓库 %s 有新的 PR %s 了！
+                xynhub 🏳️‍⚧️ 🏳️‍🌈 团队敬上
+               """.formatted(repoName, prTitle);
+        for (String to : receiver) {
+            sendMail(to, subject, content);
+        }
+        return "success";
     }
 
 }

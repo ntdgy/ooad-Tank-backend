@@ -9,6 +9,7 @@ import tank.ooad.fitgub.entity.repo.PullRequest;
 import tank.ooad.fitgub.entity.repo.Repo;
 import tank.ooad.fitgub.exception.CustomException;
 import tank.ooad.fitgub.git.GitOperation;
+import tank.ooad.fitgub.service.MailService;
 import tank.ooad.fitgub.service.RepoIssueService;
 import tank.ooad.fitgub.service.RepoService;
 import tank.ooad.fitgub.utils.AttributeKeys;
@@ -30,6 +31,9 @@ public class RepoPrController {
     private GitOperation gitOperation;
     @Autowired
     private RepoService repoService;
+
+    @Autowired
+    private MailService mailService;
     @RequireLogin
     @PostMapping("/api/repo/{ownerName}/{repoName}/pull/create")
     public Return<Integer> createPullRequest(
@@ -61,6 +65,8 @@ public class RepoPrController {
             throw new CustomException(ReturnCode.SERVER_INTERNAL_ERROR);
         }
         repoIssueService.insertPullRequest(issueId, issue.pull);
+        List<String> receivers = repoService.getRepoWatchers(repo.id);
+        mailService.sendNewPrNotification(receivers, repo.name, issue.title);
         return new Return<>(ReturnCode.OK, issueIds.getValue());
     }
 

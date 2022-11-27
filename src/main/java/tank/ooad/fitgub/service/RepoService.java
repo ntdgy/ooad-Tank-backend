@@ -435,4 +435,10 @@ public class RepoService {
         var result = restTemplate.postForObject(url, map, String.class);
         System.out.println(result);
     }
+
+    public List<String> getRepoWatchers(int id) {
+        return template.query("""
+                select u.email from watch w join users u on w.user_id = u.id where w.repo_id = ?
+                """, (rs, rowNum) -> rs.getString("email"), id);
+    }
 }
