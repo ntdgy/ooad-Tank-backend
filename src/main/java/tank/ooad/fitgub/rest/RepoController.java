@@ -234,13 +234,21 @@ public class RepoController {
     }
 
     @GetMapping("/api/repo/suggest")
-    public Return<Repo> suggestRepo() {
-        return new Return<>(ReturnCode.OK, repoService.getRandomRepo());
+    public Return<Repo> suggestRepo(HttpSession httpSession) {
+        int currentUserId = (int) AttributeKeys.USER_ID.getValue(httpSession);
+        var randomRepo = repoService.getRandomRepo();
+        repoService.fillStarAndWatch(randomRepo, currentUserId);
+        return new Return<>(ReturnCode.OK, randomRepo);
     }
 
     @PostMapping("/api/repo/search")
-    public Return<List<Repo>> searchRepo(@RequestParam String keyword) {
-        return new Return<>(ReturnCode.OK, repoService.searchRepo(keyword));
+    public Return<List<Repo>> searchRepo(@RequestParam String keyword, HttpSession httpSession) {
+        int currentUserId = (int) AttributeKeys.USER_ID.getValue(httpSession);
+        var searchRepos = repoService.searchRepo(keyword);
+        for (var repo : searchRepos) {
+            repoService.fillStarAndWatch(repo, currentUserId);
+        }
+        return new Return<>(ReturnCode.OK, searchRepos);
     }
 
 
