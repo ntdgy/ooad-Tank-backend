@@ -377,9 +377,11 @@ public class RepoService {
                 select count(*) from star where repo_id = ? and user_id = ?;
                 """, Integer.class, repoId, userId);
         var isWatched = template.queryForObject("""
-                        select count(*) from star where repo_id = ? and user_id = ?;""",
+                        select count(*) from watch where repo_id = ? and user_id = ?;""",
                 Integer.class, repoId, userId);
         var returnList = new ArrayList<Boolean>();
+        System.out.println(isStared);
+        System.out.println(isWatched);
         returnList.add(isStared != null && isStared > 0);
         returnList.add(isWatched != null && isWatched > 0);
         return returnList;
