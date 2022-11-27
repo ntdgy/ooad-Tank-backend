@@ -32,6 +32,8 @@ public enum ReturnCode {
     ISSUE_INTERNAL_ERROR(-3000, "some internal error detected, please contact admins"),
     ISSUE_CLOSED(-3001, "issue closed"),
     ISSUE_OPENED(-3002, "issue opened"),
+    ISSUE_NOT_EXIST(-3003, "issue not exist"),
+    PULL_REQUEST_NOT_EXIST(-3004, "pull request not exist"),
 
     REPO_DUPLICATED(-4000, "repo is already existed."),
     REPO_NON_EXIST(-4001, "repo is not existed."),

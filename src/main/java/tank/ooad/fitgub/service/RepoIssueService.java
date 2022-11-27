@@ -32,13 +32,18 @@ public class RepoIssueService {
      * @return issue id
      */
     public int resolveIssue(String ownerName, String repoName, int repoIssueId) {
-        var issueId = jdbcTemplate.queryForObject("""
+        try {
+            var issueId = jdbcTemplate.queryForObject("""
                     select issue.id from issue
                         join repo r on r.id = issue.repo_id
                         join users uo on uo.id = r.owner_id
                     where uo.name = ? and r.name = ? and issue.repo_issue_id = ?;
                 """, Integer.class, ownerName, repoName, repoIssueId);
-        return issueId == null ? -1 : issueId;
+            return issueId == null ? -1 : issueId;
+        }
+        catch (org.springframework.dao.EmptyResultDataAccessException e) {
+            return -1;
+        }
     }
 
     private int getRepoNextIssueId(int repoId) {

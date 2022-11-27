@@ -86,6 +86,9 @@ public class RepoIssueController {
             HttpSession session) {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
         int issueId = repoIssueService.resolveIssue(ownerName, repoName, repoIssueId);
+        if (issueId == -1) {
+            return new Return<>(ReturnCode.ISSUE_NOT_EXIST);
+        }
         var repo = repoService.getRepo(ownerName, repoName);
         if (!(repoService.checkRepoWritePermission(repo, currentUserId) || repoIssueService.checkIssueOwner(currentUserId, issueId))) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
@@ -106,12 +109,15 @@ public class RepoIssueController {
             HttpSession session) {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
         int issueId = repoIssueService.resolveIssue(ownerName, repoName, repoIssueId);
+        if(issueId == -1){
+            return new Return<>(ReturnCode.ISSUE_NOT_EXIST);
+        }
         var repo = repoService.getRepo(ownerName, repoName);
         if (!repoService.checkRepoWritePermission(repo, currentUserId) || !repoIssueService.checkIssueOwner(currentUserId, issueId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
-        if (!repoIssueService.checkIssueClosable(issueId)) {
-            return new Return<>(ReturnCode.ISSUE_CLOSED);
+        if (repoIssueService.checkIssueClosable(issueId)) {
+            return new Return<>(ReturnCode.ISSUE_OPENED);
         }
         repoIssueService.reopenIssue(issueId);
         return Return.OK;
