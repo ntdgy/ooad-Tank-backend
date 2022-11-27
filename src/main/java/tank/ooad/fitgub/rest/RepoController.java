@@ -126,15 +126,44 @@ public class RepoController {
 
     @RequireLogin
     @GetMapping("/api/repo/{ownerName}/{repoName}/action/star")
+    public Return<Integer> watchRepo(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
+        int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
+        Repo repo = repoService.getRepo(ownerName, repoName);
+        if (repo == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
+        if (!repoService.checkRepoReadPermission(repo, currentUserId)) {
+            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+        }
+        var watches = repoService.watchRepo(currentUserId, repo.id);
+        if (watches == -1) return new Return<>(ReturnCode.REPO_ALREADY_STARRED);
+        return new Return<>(ReturnCode.OK, watches);
+    }
+
+    @RequireLogin
+    @GetMapping("/api/repo/{ownerName}/{repoName}/action/unWatch")
+    public Return<Integer> unwatchRepo(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
+        int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
+        Repo repository = repoService.getRepo(ownerName, repoName);
+        if (repository == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
+        if (!repository.isPublic() && currentUserId != 0
+                && !(repository.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
+            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+        }
+        var watches = repoService.unwatchRepo(currentUserId, repository.id);
+        if (watches == -1) return new Return<>(ReturnCode.REPO_ALREADY_UNWATCHED);
+        return new Return<>(ReturnCode.OK, watches);
+    }
+
+    @RequireLogin
+    @GetMapping("/api/repo/{ownerName}/{repoName}/action/watch")
     public Return<Integer> starRepo(@PathVariable String ownerName, @PathVariable String repoName, HttpSession session) {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
         Repo repo = repoService.getRepo(ownerName, repoName);
         if (!repoService.checkRepoReadPermission(repo, currentUserId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
-        var stars = repoService.starRepo(currentUserId, repo.id);
-        if (stars == -1) return new Return<>(ReturnCode.REPO_ALREADY_STARRED);
-        return new Return<>(ReturnCode.OK, stars);
+        var watches = repoService.watchRepo(currentUserId, repo.id);
+        if (watches == -1) return new Return<>(ReturnCode.REPO_ALREADY_WATCHED);
+        return new Return<>(ReturnCode.OK, watches);
     }
 
     @RequireLogin

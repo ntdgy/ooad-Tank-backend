@@ -299,6 +299,27 @@ public class RepoService {
         }
     }
 
+    public int watchRepo(int userId, int repoId) {
+        var isWatched = template.queryForObject("""
+                        select count(*) from watch where user_id = ? and repo_id = ?
+                        """, Integer.class,
+                userId, repoId);
+        if (isWatched == null || isWatched == 0) {
+            template.update("""
+                    insert into watch (user_id, repo_id) values (?, ?)""", userId, repoId);
+            var watchs = template.queryForObject("""
+                    update repo set watchs = watchs + 1 where id = ?
+                    returning watchs;
+                    """, Integer.class, repoId);
+            if (watchs == null) {
+                throw new RuntimeException("update repo watches failed");
+            }
+            return watchs;
+        } else {
+            return -1;
+        }
+    }
+
     public int unstarRepo(int userId, int repoId) {
         var isStarred = template.queryForObject("""
                         select count(*) from star where user_id = ? and repo_id = ?
@@ -316,6 +337,28 @@ public class RepoService {
                 throw new RuntimeException("update repo stars failed");
             }
             return stars;
+        } else {
+            return -1;
+        }
+    }
+
+    public int unwatchRepo(int userId, int repoId) {
+        var isWatched = template.queryForObject("""
+                        select count(*) from watch where user_id = ? and repo_id = ?
+                        """, Integer.class,
+                userId, repoId);
+        if (isWatched != null && isWatched > 0) {
+            template.update("""
+                    delete from watch where user_id = ? and repo_id = ?
+                    """, userId, repoId);
+            var watchs = template.queryForObject("""
+                    update repo set watchs = watchs - 1 where id = ?
+                    returning watchs;
+                    """, Integer.class, repoId);
+            if (watchs == null) {
+                throw new RuntimeException("update repo watches failed");
+            }
+            return watchs;
         } else {
             return -1;
         }
