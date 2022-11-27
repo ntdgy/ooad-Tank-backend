@@ -31,18 +31,19 @@ public class CIController {
 
     @PostMapping("/api/repo/{userName}/{repoName}/ci/run")
     @RequireLogin
-    public Return<List<String>> runCI(@PathVariable String userName,
+    public Return<String> runCI(@PathVariable String userName,
                                       @PathVariable String repoName,
                                       @RequestParam String ciName,
                                       @RequestParam("file") MultipartFile file,
                                       HttpSession httpSession) throws IOException {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(httpSession);
-        log.error("currentUserId: " + currentUserId);
         Repo repo = repoService.getRepo(userName, repoName);
         if (!repoService.checkRepoWritePermission(repo, currentUserId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
-        return new Return<>(OK, ciService.runCI(repo.id, currentUserId, ciName,file.getInputStream()));
+        ciService.runCI(repo.id, currentUserId, ciName,file.getInputStream());
+        return new Return<>(OK,"Success");
+//        return new Return<>(OK, ciService.runCI(repo.id, currentUserId, ciName,file.getInputStream()));
     }
 
     @GetMapping("/api/repo/{userName}/{repoName}/ci/list")
@@ -51,7 +52,6 @@ public class CIController {
                                           @PathVariable String repoName,
                                           HttpSession httpSession) throws IOException {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(httpSession);
-        log.error("currentUserId: " + currentUserId);
         Repo repo = repoService.getRepo(userName, repoName);
         if (!repoService.checkRepoWritePermission(repo, currentUserId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
@@ -66,7 +66,6 @@ public class CIController {
                                     @PathVariable int id,
                                     HttpSession httpSession) throws IOException {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(httpSession);
-        log.error("currentUserId: " + currentUserId);
         Repo repo = repoService.getRepo(userName, repoName);
         if (!repoService.checkRepoReadPermission(repo, currentUserId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
