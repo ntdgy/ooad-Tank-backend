@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Component
 @RestController
@@ -162,6 +163,9 @@ public class GitController {
             GitPerson committer = new GitPerson(committerName, committerEmail);
             Map<String, byte[]> contents = new HashMap<>();
             contents.put(path + file.getOriginalFilename(), file.getBytes());
+            if (Objects.equals(message, "")){
+                message = "Add file %s.".formatted(file.getName());
+            }
             gitOperation.commit(repository,branch, committer, message, contents);
             return new Return<>(ReturnCode.OK);
         } catch (Exception e) {
