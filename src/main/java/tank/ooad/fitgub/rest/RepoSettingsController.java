@@ -76,8 +76,8 @@ public class RepoSettingsController {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         var repo = repoService.getRepo(userId, repoName);
         try {
-            gitController.deleteGitRepo(repo);
             repoService.dropRepo(userId, repoName);
+            gitController.deleteGitRepo(repo);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
