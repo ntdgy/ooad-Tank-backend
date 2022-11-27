@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @Component
 public class CIService {
@@ -26,7 +27,7 @@ public class CIService {
     private JdbcTemplate jdbcTemplate;
 
     @Async
-    public List<String> runCI(int repoId, int userId, String ciName, InputStream inputStream) {
+    public void runCI(int repoId, int userId, String ciName, InputStream inputStream) {
         Yaml yaml = new Yaml();
         try {
 //            InputStream inputStream = new FileInputStream(path);
@@ -81,11 +82,12 @@ public class CIService {
 //                client.stopContainerCmd(container.getId()).exec();
                 client.removeContainerCmd(container.getId()).exec();
             }
-            return returnHash;
+            CompletableFuture.completedFuture(returnHash);
+            return;
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
-        return null;
+        CompletableFuture.completedFuture(null);
     }
 
     public List<CiWork> getCIList(int repoId) {

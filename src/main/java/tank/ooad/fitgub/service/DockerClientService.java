@@ -17,7 +17,8 @@ public class DockerClientService {
 
     public DockerClient connectDocker() {
         DockerClientConfig dockerClientConfig = DefaultDockerClientConfig.createDefaultConfigBuilder()
-                .withDockerHost("tcp://192.168.1.3:2375").build();
+//                .withDockerHost("tcp://192.168.1.3:2375").build();
+                .withDockerHost("tcp://127.0.0.7:2375").build();
 //        DockerClient dockerClient = DockerClientBuilder.getInstance("tcp://192.168.1.3:2375").build();
         DockerClient dockerClient = DockerClientBuilder.getInstance(dockerClientConfig).build();
         Info info = dockerClient.infoCmd().exec();
