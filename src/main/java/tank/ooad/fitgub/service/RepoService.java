@@ -347,6 +347,7 @@ public class RepoService {
                 (select count(*) from watch as w where w.user_id = ? and w.repo_id = repo.id) as watch
                from repo where repo.id = ?
                """, currentUserId, currentUserId, repo.id);
+        resultSet.next();
         repo.starred = resultSet.getInt("star") != 0;
         repo.watched = resultSet.getInt("watch") != 0;
     }

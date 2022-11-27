@@ -2,6 +2,7 @@ package tank.ooad.fitgub.entity.repo;
 
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.jdbc.core.RowMapper;
 import tank.ooad.fitgub.entity.user.User;
@@ -29,9 +30,11 @@ public class Repo {
     public int visible;
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    public boolean starred;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public Boolean starred = null;
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    public boolean watched;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public Boolean watched = null;
 
     @JsonProperty(access = JsonProperty.Access.READ_WRITE)
     public void setPublic(boolean isPublic) {
