@@ -9,6 +9,8 @@ import tank.ooad.fitgub.utils.MyConfig;
 
 import javax.validation.constraints.*;
 
+import java.sql.SQLException;
+
 import static tank.ooad.fitgub.validator.ConstantRegexValidator.REPO_NAME;
 
 public class Repo {
@@ -25,6 +27,11 @@ public class Repo {
 
     @JsonIgnore
     public int visible;
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public boolean starred;
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public boolean watched;
 
     @JsonProperty(access = JsonProperty.Access.READ_WRITE)
     public void setPublic(boolean isPublic) {
@@ -56,6 +63,10 @@ public class Repo {
     public static final RowMapper<Repo> mapper = (rs, rowNum) -> {
         Repo repo = new Repo(rs.getInt("repo_id"), rs.getString("repo_name"), rs.getInt("repo_visible"));
         repo.owner = new User(rs.getInt("repo_owner_id"), rs.getString("repo_owner_name"), rs.getString("repo_owner_email"));
+        try {
+            repo.starred = rs.getInt("star") != 0;
+            repo.watched = rs.getInt("watch") != 0;
+        } catch (SQLException ignored) {}
         return repo;
     };
 

@@ -69,20 +69,24 @@ public class RepoService {
     public List<Repo> getUserRepos(int userId) throws GitRepoNonExistException {
         return template.query("""
                         select repo.id as repo_id, repo.name as repo_name, repo.visible as repo_visible,
-                                    repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email
-                                    from repo join users uo on repo.owner_id = uo.id
+                                    repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email,
+                                    (select count(*) from star as s where s.user_id = ? and s.repo_id = repo.id) as star,
+                                    (select count(*) from watch as w where w.user_id = ? and w.repo_id = repo.id) as watch
+                                        from repo
+                                    join users uo on repo.owner_id = uo.id
                                 where uo.id = ?
                         union distinct
                         select repo_id, repo.name as repo_name, repo.visible as repo_visible,
-                                    repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email
+                                    repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email,
+                                    (select count(*) from star as s where s.user_id = ? and s.repo_id = repo.id) as star,
+                                    (select count(*) from watch as w where w.user_id = ? and w.repo_id = repo.id) as watch
                                         from repo
                                     join users uo on repo.owner_id = uo.id
                                     join user_repo ur on repo.id = ur.repo_id and ur.user_id = ?
-                                
-                                                                                 """,
+                                    """,
                 Repo.mapper,
-                userId,
-                userId);
+                userId, userId, userId,
+                userId, userId, userId);
     }
 
     /**
@@ -147,23 +151,28 @@ public class RepoService {
         return cnt != null && cnt > 0;
     }
 
-    public List<Repo> getUserPublicRepos(String username) {
+    public List<Repo> getUserPublicRepos(String username, int currentUserId) {
         return template.query("""
                         select repo.id as repo_id, repo.name as repo_name, repo.visible as repo_visible,
-                                    repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email
-                                    from repo join users uo on repo.owner_id = uo.id
+                                    repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email,
+                                    (select count(*) from star as s where s.user_id = ? and s.repo_id = repo.id) as star,
+                                    (select count(*) from watch as w where w.user_id = ? and w.repo_id = repo.id) as watch
+                                        from repo
+                                    join users uo on repo.owner_id = uo.id
                                 where uo.name = ? and repo.visible = ?
                         union distinct
                         select repo.id as repo_id, repo.name as repo_name, repo.visible as repo_visible,
-                                    repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email
+                                    repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email,
+                                    (select count(*) from star as s where s.user_id = ? and s.repo_id = repo.id) as star,
+                                    (select count(*) from watch as w where w.user_id = ? and w.repo_id = repo.id) as watch
                                         from repo
                                     join users uo on repo.owner_id = uo.id
                                     join user_repo ur on repo.id = ur.repo_id and ur.user_id = (select id from users uu where uu.name = ?)
                                 where repo.visible = ?
-                                                                                 """,
+                        """,
                 Repo.mapper,
-                username, Repo.VISIBLE_PUBLIC,
-                username, Repo.VISIBLE_PUBLIC);
+                currentUserId, currentUserId, username, Repo.VISIBLE_PUBLIC,
+                currentUserId, currentUserId, username, Repo.VISIBLE_PUBLIC);
     }
 
     public List<RepoCollaborator> getRepoCollaborators(int ownerUserId, String repoName) {
