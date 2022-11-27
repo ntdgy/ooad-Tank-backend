@@ -15,10 +15,7 @@ import tank.ooad.fitgub.entity.ci.Job;
 import tank.ooad.fitgub.entity.ci.Step;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 @Component
@@ -88,7 +85,11 @@ public class CIService {
             e.printStackTrace();
         }catch (java.lang.NullPointerException e){
             // get random 64 length string
-            String hash = String.valueOf(Math.random()).substring(2, 66);
+            UUID randomUUID = UUID.randomUUID();
+            UUID randomUUID2 = UUID.randomUUID();
+            String randomUUIDString = randomUUID.toString().replace("-", "");
+            String randomUUIDString2 = randomUUID2.toString().replace("-", "");
+            String hash = randomUUIDString + randomUUIDString2;
             OutputStream outputStream = new FileOutputStream("src/main/docker-log/" + hash + ".log");
             outputStream.write("yaml file is not valid".getBytes());
             outputStream.close();
