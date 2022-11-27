@@ -266,7 +266,7 @@ public class RepoService {
                 update  repo
                 set description = ?, forked_from_id = ?
                 where repo.id = ?
-                """, status.description, status.forked_from_id, repo.id) == 1;
+                """, status.description, status.forked_from_id == 0 ? null : status.forked_from_id, repo.id) == 1;
     }
 
     public int starRepo(int userId, int repoId) {
