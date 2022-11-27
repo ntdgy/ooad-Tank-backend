@@ -108,7 +108,7 @@ public class CIService {
             br.close();
             return sb.toString();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            return "文件不存在，请联系管理员";
         }
     }
 }
