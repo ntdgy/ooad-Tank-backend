@@ -100,7 +100,7 @@ public class CIService {
     }
 
     public List<CiWork> getCIList(int repoId) {
-        return jdbcTemplate.query("select id as id,ci_name as ci_name,output_hash as output_hash from ci_log where repo_id = ?", CiWork.mapper, repoId);
+        return jdbcTemplate.query("select id as id,ci_name as ci_name,output_hash as output_hash, created_at as created_at from ci_log where repo_id = ?", CiWork.mapper, repoId);
     }
 
     public String getCIOutput(int id) {
