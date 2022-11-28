@@ -143,7 +143,7 @@ public class GitController {
     @RequireLogin
     public Return<GitCommit> uploadFile(@PathVariable String ownerName,
                                         @PathVariable String repoName,
-                                        @RequestParam("file") MultipartFile file,
+                                        @RequestParam("file") MultipartFile[] files,
                                         @RequestParam("branch") String branch,
                                         @RequestParam("committerName") String committerName,
                                         @RequestParam("committerEmail") String committerEmail,
@@ -159,9 +159,11 @@ public class GitController {
         try {
             GitPerson committer = new GitPerson(committerName, committerEmail);
             Map<String, byte[]> contents = new HashMap<>();
-            contents.put(path + file.getOriginalFilename(), file.getBytes());
+            for (var file:files) {
+                contents.put(path + file.getOriginalFilename(), file.getBytes());
+            }
             if (Objects.equals(message, "")) {
-                message = "Add file %s.".formatted(file.getName());
+                message = "Add file %s.".formatted(files[0].getName());
             }
             var returnObj = gitOperation.commit(repository, branch, committer, message, contents);
             if (returnObj == null){
