@@ -2,40 +2,33 @@ package tank.ooad.fitgub.git;
 
 import cn.hutool.core.io.CharsetDetector;
 import cn.hutool.core.io.FileUtil;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
-import org.eclipse.jgit.api.CheckoutCommand;
 import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.GitCommand;
-import org.eclipse.jgit.api.errors.ConcurrentRefUpdateException;
-import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.api.errors.JGitInternalException;
+import org.eclipse.jgit.api.MergeResult;
 import org.eclipse.jgit.dircache.DirCache;
 import org.eclipse.jgit.dircache.DirCacheEditor;
 import org.eclipse.jgit.dircache.DirCacheEntry;
-import org.eclipse.jgit.internal.JGitText;
 import org.eclipse.jgit.internal.storage.file.FileRepository;
 import org.eclipse.jgit.lib.*;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.transport.URIish;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.eclipse.jgit.treewalk.TreeWalk;
-import org.eclipse.jgit.util.IO;
 import org.springframework.stereotype.Component;
 import tank.ooad.fitgub.entity.git.*;
+import tank.ooad.fitgub.entity.repo.Issue;
 import tank.ooad.fitgub.entity.repo.Repo;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.text.MessageFormat;
 import java.util.*;
 import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
-
-import cn.hutool.core.lang.Pair;
 
 
 @Component
@@ -45,6 +38,11 @@ public class GitOperation {
     private static final String REPO_STORE_PATH = "../repo-store";
 
     private static final GitPerson xynhub = new GitPerson("xynhub", "ooad@dgy.ac.cn");
+
+    public record MergeBranch(int ownerId, int repoId, String branchName){}
+    public record MergeRequest(MergeBranch from, MergeBranch to){}
+
+    private final HashMap<MergeRequest, GitMergeStatus> mergeStatusCache = new HashMap<>();
 
     /***
      * Create RepoStore in disk.
@@ -73,6 +71,10 @@ public class GitOperation {
 
     public Repository getRepository(Repo repo) throws IOException {
         File repoPath = new File(REPO_STORE_PATH, String.format("%s/%s", repo.owner.id, repo.id));
+        return new FileRepository(repoPath);
+    }
+    private Repository getRepository(int ownerId, int repoId) throws IOException {
+        File repoPath = new File(REPO_STORE_PATH, String.format("%s/%s", ownerId, repoId));
         return new FileRepository(repoPath);
     }
 
@@ -326,5 +328,132 @@ public class GitOperation {
             }
         }
         return false;
+    }
+
+    @SneakyThrows
+    public GitMergeStatus getMergeStatus(MergeRequest mergeRequest, Issue pull) {
+        if (mergeStatusCache.containsKey(mergeRequest)) {
+            GitMergeStatus cached = mergeStatusCache.get(mergeRequest);
+            try (var source = getRepository(mergeRequest.from.ownerId, mergeRequest.from.repoId);var target = getRepository(mergeRequest.to.ownerId, mergeRequest.to.repoId)) {
+                var sourceBranch = source.resolve(mergeRequest.from.branchName);
+                var targetBranch = target.resolve(mergeRequest.to.branchName);
+                if (sourceBranch != null && sourceBranch.toObjectId().toString().equals(cached.from_branch_commit)
+                    && targetBranch != null && targetBranch.toObjectId().toString().equals(cached.to_branch_commit)) {
+                    if (cached.status != GitMergeStatus.Status.PENDING) {
+                        log.info("Result cached!");
+                        return cached;
+                    }
+                }
+            }
+        }
+        // recalculate the result
+        GitMergeStatus ret = new GitMergeStatus(pull);
+        mergeStatusCache.put(mergeRequest, ret);
+        File tempFolder;
+        while (true) {
+            tempFolder = new File(String.format("/tmp/merge-tmp-%s-%s-%s-%s-%s", ret.from.getOwnerName(), ret.from.getRepoName(), ret.to.getOwnerName(), ret.to.getRepoName(), UUID.randomUUID()));
+            if (tempFolder.exists()) continue;
+            tempFolder.mkdir();
+            break;
+        }
+        try {
+            log.info("check merge status at " + tempFolder);
+            Git copiedRepo =  Git.init().setBare(false).setDirectory(tempFolder).call();
+            try (var source = getRepository(mergeRequest.from.ownerId, mergeRequest.from.repoId);var target = getRepository(mergeRequest.from.ownerId, mergeRequest.from.repoId)) {
+                var fromCommit = source.resolve(ret.from_branch);
+                if (fromCommit == null) {
+                    ret.status = GitMergeStatus.Status.BRANCH_DELETED;
+                    return ret;
+                }
+                ret.from_branch_commit = fromCommit.toString();
+                var toCommit = source.resolve(ret.to_branch);
+                if (toCommit == null) {
+                    ret.status = GitMergeStatus.Status.BRANCH_DELETED;
+                    return ret;
+                }
+                ret.to_branch_commit = toCommit.toString();
+            }
+
+            var fromRepoPath = new File(REPO_STORE_PATH, String.format("%s/%s", mergeRequest.from.ownerId, mergeRequest.from.repoId));
+            var toRepoPath = new File(REPO_STORE_PATH, String.format("%s/%s", mergeRequest.to.ownerId, mergeRequest.to.repoId));
+            copiedRepo.remoteAdd().setName("from").setUri(new URIish(fromRepoPath.getAbsolutePath())).call();
+            copiedRepo.fetch().setRemote("from").setInitialBranch(mergeRequest.from.branchName).call();
+            copiedRepo.checkout().setName("from").setCreateBranch(true).setStartPoint("from/" + mergeRequest.from.branchName).call();
+
+            copiedRepo.remoteAdd().setName("into").setUri(new URIish(toRepoPath.getAbsolutePath())).call();
+            copiedRepo.fetch().setRemote("into").setInitialBranch(mergeRequest.to.branchName).call();
+            copiedRepo.checkout().setName("into").setCreateBranch(true).setStartPoint("into/" + mergeRequest.to.branchName).call();
+
+            Config config = copiedRepo.getRepository().getConfig();
+            config.setBoolean(ConfigConstants.CONFIG_COMMIT_SECTION, null,
+                    ConfigConstants.CONFIG_KEY_GPGSIGN, false);
+            config.setString(ConfigConstants.CONFIG_USER_SECTION, null, ConfigConstants.CONFIG_KEY_NAME, "xynHub");
+            config.setString(ConfigConstants.CONFIG_USER_SECTION, null, ConfigConstants.CONFIG_KEY_EMAIL, "ooad@ooad.dgy.ac.cn");
+            var result = copiedRepo.merge()
+                    .include(copiedRepo.getRepository().findRef("from"))
+                    .setCommit(true)
+                    .setMessage("Miao Miao Miao")
+                    .call();
+            log.info(result.toString());
+            if (result.getMergeStatus().isSuccessful()) {
+                ret.status = GitMergeStatus.Status.READY;
+            } else {
+                ret.status = GitMergeStatus.Status.CONFLICT;
+                ret.conflict_files.addAll(result.getConflicts().keySet());
+            }
+            return ret;
+        } finally {
+            FileUtil.del(tempFolder);
+        }
+    }
+
+    public static void copyCommits(Repository from, Repository to, ObjectId commitId) throws IOException {
+        try (var toReader = to.getObjectDatabase().newReader(); var fromReader = from.getObjectDatabase().newReader(); var toWriter = to.getObjectDatabase().newInserter()) {
+            copyCommits(from, fromReader, toReader, toWriter, commitId);
+        }
+    }
+
+    private static void CopyObject(ObjectInserter inserter, ObjectLoader loader) throws IOException {
+        try (var stream = loader.openStream()) {
+            inserter.insert(loader.getType(), loader.getSize(), stream);
+        }
+    }
+
+    public static void copyCommits(Repository from, ObjectReader fromReader, ObjectReader toReader, ObjectInserter toWriter, ObjectId rootCommitId) throws IOException {
+        Stack<ObjectId> commits = new Stack<>();
+        Stack<ObjectId> trees = new Stack<>();
+        commits.push(rootCommitId);
+        while (!commits.isEmpty()) {
+            ObjectId currentCommit = commits.pop();
+            if (toReader.has(currentCommit)) continue;
+            // Insert Commit
+            System.out.println("Copy Commit " + currentCommit.getName());
+            CopyObject(toWriter, fromReader.open(currentCommit));
+
+            RevCommit commit = new RevWalk(from).parseCommit(currentCommit);
+            for (RevCommit parent : commit.getParents()) commits.push(parent.getId());
+            // Check Tree
+            trees.push(new RevWalk(from).parseCommit(currentCommit).getTree().getId());
+            try (TreeWalk walk = new TreeWalk(from)) {
+                walk.setRecursive(false);
+                while (!trees.isEmpty()) {
+                    var treeId = trees.pop();
+                    if (toReader.has(treeId)) continue;
+                    System.out.println("Copy tree " + currentCommit.getName());
+                    CopyObject(toWriter, fromReader.open(treeId));
+                    walk.reset(treeId);
+                    MutableObjectId objectId = new MutableObjectId();
+                    while (walk.next()) {
+                        walk.getObjectId(objectId, 0);
+                        if (toReader.has(objectId)) continue;
+                        if (walk.isSubtree()) trees.push(objectId.toObjectId());
+                        else {
+                            System.out.println("Copy blob " + objectId.getName());
+                            CopyObject(toWriter, fromReader.open(objectId));
+                        }
+                    }
+                }
+            }
+        }
     }
 }

@@ -2,6 +2,7 @@ package tank.ooad.fitgub.service;
 
 import cn.hutool.core.lang.Pair;
 import lombok.extern.slf4j.Slf4j;
+import org.glassfish.jersey.internal.inject.Custom;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -152,7 +153,7 @@ public class RepoIssueService {
                             """,
                 Issue.mapper,
                 repoId, repoIssueId);
-        if (iss == null) throw new RuntimeException(); // TODO: Use NotExistException
+        if (iss == null) throw new CustomException(ReturnCode.ISSUE_NOT_EXIST);
         loadContents(iss);
         return iss;
     }
@@ -203,6 +204,10 @@ public class RepoIssueService {
                 repoId);
     }
 
+    public Issue getPull(int repoId, int repoPullId) {
+        return getPull(repoId, repoPullId, true);
+    }
+
     /**
      * Get Pull Request with full content
      *
@@ -210,7 +215,7 @@ public class RepoIssueService {
      * @param repoPullId
      * @return
      */
-    public Issue getPull(int repoId, int repoPullId) {
+    public Issue getPull(int repoId, int repoPullId, boolean loadContents) {
         var iss = jdbcTemplate.queryForObject("""
                         select issue.id,
                                issue.repo_issue_id,
@@ -232,8 +237,9 @@ public class RepoIssueService {
                         """,
                 Issue.mapper,
                 repoId, repoPullId);
-        if (iss == null) throw new RuntimeException(); // TODO
-        loadContents(iss);
+        if (iss == null) throw new CustomException(ReturnCode.ISSUE_NOT_EXIST);
+        if (loadContents)
+            loadContents(iss);
         loadPull(iss);
         return iss;
     }
@@ -256,7 +262,7 @@ public class RepoIssueService {
         );
     }
 
-    private void loadPull(Issue iss) {
+    public void loadPull(Issue iss) {
         iss.pull = jdbcTemplate.queryForObject("select * from pull_requests where id = ?", PullRequest.mapper, iss.pull_id);
         if (iss.pull == null) throw new CustomException(ReturnCode.SERVER_INTERNAL_ERROR);
         iss.pull.from = repoService.getRepo(iss.pull.from_repo_id);

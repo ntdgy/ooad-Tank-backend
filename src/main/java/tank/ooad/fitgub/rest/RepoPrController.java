@@ -3,9 +3,9 @@ package tank.ooad.fitgub.rest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import tank.ooad.fitgub.entity.git.GitMergeStatus;
 import tank.ooad.fitgub.entity.repo.Issue;
 import tank.ooad.fitgub.entity.repo.IssueContent;
-import tank.ooad.fitgub.entity.repo.PullRequest;
 import tank.ooad.fitgub.entity.repo.Repo;
 import tank.ooad.fitgub.exception.CustomException;
 import tank.ooad.fitgub.git.GitOperation;
@@ -165,4 +165,24 @@ public class RepoPrController {
         return new Return<>(ReturnCode.OK, contentId);
     }
 
+
+    @RequireLogin
+    @PostMapping("/api/repo/{ownerName}/{repoName}/pull/{repoIssueId}/checkMerge")
+    public Return<GitMergeStatus> checkMerge(
+            @PathVariable String ownerName,
+            @PathVariable String repoName,
+            @PathVariable int repoIssueId,
+            HttpSession httpsession) {
+        int currentUserId = (int) AttributeKeys.USER_ID.getValue(httpsession);
+        var repo = repoService.getRepo(ownerName, repoName);
+        var pull = repoIssueService.getPull(repo.id, repoIssueId, false);
+        if (pull.status.equals("merged")) {
+            var ret = new GitMergeStatus(pull);
+            ret.status = GitMergeStatus.Status.MERGED;
+            return new Return<>(ReturnCode.OK, ret);
+        }
+        var merge = new GitOperation.MergeRequest(new GitOperation.MergeBranch(pull.pull.from.owner.id, pull.pull.from.id, pull.pull.from_branch),
+                new GitOperation.MergeBranch(pull.pull.to.owner.id, pull.pull.to.id, pull.pull.to_branch));
+        return new Return<>(ReturnCode.OK, gitOperation.getMergeStatus(merge, pull));
+    }
 }
