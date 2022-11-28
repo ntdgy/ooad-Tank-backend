@@ -1,5 +1,7 @@
 package tank.ooad.fitgub.rest;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.pqc.crypto.rainbow.Layer;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,14 +55,16 @@ public class CIController {
     @RequireLogin
     public Return<String> runCI(@PathVariable String userName,
                                 @PathVariable String repoName,
-                                @RequestParam String ref,
-                                @RequestParam String path,
+                                @RequestBody String content,
                                 HttpSession httpSession) throws IOException {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(httpSession);
         Repo repo = repoService.getRepo(userName, repoName);
         if (!repoService.checkRepoWritePermission(repo, currentUserId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
+        JsonNode node = new ObjectMapper().readTree(content);
+        String path = node.path("path").asText();
+        String ref = node.path("ref").asText();
         try {
             path = "/.xynhub/" + path;
             var loader = gitOperation.getGitBlobLoader(repo, ref, path);
