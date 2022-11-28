@@ -13,7 +13,9 @@ import tank.ooad.fitgub.utils.AttributeKeys;
 import tank.ooad.fitgub.utils.Return;
 import tank.ooad.fitgub.utils.ReturnCode;
 
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import java.io.IOException;
 import java.util.Objects;
 
 @RestController
@@ -27,7 +29,8 @@ public class OauthController {
 
     @GetMapping("/api/oauth/github")
     public Return<Void> github(@RequestParam String code,
-                               HttpSession session
+                               HttpSession session,
+                               HttpServletResponse response
                        ) {
         System.out.println(code);
         String accessToken = oauthService.accessToken(code);
@@ -62,9 +65,12 @@ public class OauthController {
                 return Return.OK;
             }
             AttributeKeys.USER_ID.setValue(session, valid);
+            response.sendRedirect("http://192.168.1.175:5173/");
             return Return.OK;
         } catch (JsonProcessingException e) {
             e.printStackTrace();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
         return null;
     }
