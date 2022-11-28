@@ -28,6 +28,7 @@ public enum ReturnCode {
     GIT_REPO_NO_PERMISSION(-2003, "no permission"),
     GIT_BRANCH_NON_EXIST(-2004, "Requested branch does not exist or it is already set"),
     GIT_FILE_NON_EXIST(-2005, "Requested file doesn't exist."),
+    GIT_COMMIT_DUPLICATE(-2006, "Commit already exists."),
 
     ISSUE_INTERNAL_ERROR(-3000, "some internal error detected, please contact admins"),
     ISSUE_CLOSED(-3001, "issue closed"),

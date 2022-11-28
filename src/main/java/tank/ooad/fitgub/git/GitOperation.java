@@ -2,6 +2,7 @@ package tank.ooad.fitgub.git;
 
 import cn.hutool.core.io.CharsetDetector;
 import cn.hutool.core.io.FileUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.eclipse.jgit.api.CheckoutCommand;
@@ -38,6 +39,7 @@ import cn.hutool.core.lang.Pair;
 
 
 @Component
+@Slf4j
 public class GitOperation {
 
     private static final String REPO_STORE_PATH = "../repo-store";
@@ -195,7 +197,7 @@ public class GitOperation {
             try (ObjectInserter odi = repository.newObjectInserter()) {
                 ObjectId headId = repository.resolve(branchName + "^{commit}");
                 DirCache index = createTemporaryIndex(repository, headId, contents);
-                assert index != null;
+                if (index == null) return null;
                 ObjectId indexTreeId = index.writeTree(odi);
                 odi.flush();
 

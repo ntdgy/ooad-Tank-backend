@@ -7,10 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import tank.ooad.fitgub.entity.git.GitBlob;
-import tank.ooad.fitgub.entity.git.GitPerson;
-import tank.ooad.fitgub.entity.git.GitRepo;
-import tank.ooad.fitgub.entity.git.GitTreeEntry;
+import tank.ooad.fitgub.entity.git.*;
 import tank.ooad.fitgub.entity.repo.Repo;
 import tank.ooad.fitgub.git.GitOperation;
 import tank.ooad.fitgub.service.RepoService;
@@ -144,30 +141,33 @@ public class GitController {
 
     @PostMapping("/api/git/{ownerName}/{repoName}/upload")
     @RequireLogin
-    public Return<String> uploadFile(@PathVariable String ownerName,
-                                     @PathVariable String repoName,
-                                     @RequestParam("file") MultipartFile file,
-                                     @RequestParam("branch") String branch,
-                                     @RequestParam("committerName") String committerName,
-                                     @RequestParam("committerEmail") String committerEmail,
-                                     @RequestParam("message") String message,
-                                     @RequestParam("path") String path,
-                                     HttpSession session) {
+    public Return<GitCommit> uploadFile(@PathVariable String ownerName,
+                                        @PathVariable String repoName,
+                                        @RequestParam("file") MultipartFile file,
+                                        @RequestParam("branch") String branch,
+                                        @RequestParam("committerName") String committerName,
+                                        @RequestParam("committerEmail") String committerEmail,
+                                        @RequestParam("message") String message,
+                                        @RequestParam("path") String path,
+                                        HttpSession session) {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
         Repo repository = repoService.getRepo(ownerName, repoName);
         if (repository == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
-        if (!repoService.checkRepoWritePermission(repository,currentUserId)) {
+        if (!repoService.checkRepoWritePermission(repository, currentUserId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
         try {
             GitPerson committer = new GitPerson(committerName, committerEmail);
             Map<String, byte[]> contents = new HashMap<>();
             contents.put(path + file.getOriginalFilename(), file.getBytes());
-            if (Objects.equals(message, "")){
+            if (Objects.equals(message, "")) {
                 message = "Add file %s.".formatted(file.getName());
             }
-            gitOperation.commit(repository,branch, committer, message, contents);
-            return new Return<>(ReturnCode.OK);
+            var returnObj = gitOperation.commit(repository, branch, committer, message, contents);
+            if (returnObj == null){
+                return new Return<>(ReturnCode.GIT_COMMIT_DUPLICATE);
+            }
+            return new Return<>(ReturnCode.OK, returnObj);
         } catch (Exception e) {
             log.error(e.getMessage());
             throw new RuntimeException(e);
