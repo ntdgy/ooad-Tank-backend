@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import static tank.ooad.fitgub.utils.ReturnCode.OK;
+
 @Component
 @RestController
 @Slf4j
@@ -60,7 +62,7 @@ public class GitController {
                 && !(repo.owner.id == currentUserId || repoService.checkCollaboratorReadPermission(ownerName, repoName, currentUserId))) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
-        return new Return<>(ReturnCode.OK, gitOperation.getGitRepo(repo));
+        return new Return<>(OK, gitOperation.getGitRepo(repo));
 //        return Return.OK;
     }
 
@@ -75,7 +77,28 @@ public class GitController {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
         try {
-            return new Return<>(ReturnCode.OK, gitOperation.getCommits(repo, ref));
+            return new Return<>(OK, gitOperation.getCommits(repo, ref));
+        } catch (Exception e) {
+//            throw new RuntimeException(e);
+            return new Return<>(ReturnCode.GIT_BRANCH_NON_EXIST);
+        }
+    }
+
+    @PostMapping("/api/git/{ownerName}/{repoName}/commits/{ref}/revert")
+    @RequireLogin
+    public Return<Boolean> revertCommits(@PathVariable String ownerName, @PathVariable String repoName,
+                                         @PathVariable String ref,
+                                         @RequestBody Map<String, String> body, HttpSession session) throws IOException {
+        int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
+        // Resolve Repo
+        Repo repo = repoService.getRepo(ownerName, repoName);
+        // checkPermission: require Write
+        if (!repoService.checkRepoWritePermission(repo, currentUserId)) {
+            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+        }
+        try {
+            String revertHash = body.get("hash");
+            return new Return<>(OK, gitOperation.revert(repo, ref, revertHash));
         } catch (Exception e) {
 //            throw new RuntimeException(e);
             return new Return<>(ReturnCode.GIT_BRANCH_NON_EXIST);
@@ -97,7 +120,7 @@ public class GitController {
         }
         try {
             var fileList = gitOperation.readGitTree(repository, ref, path);
-            return new Return<>(ReturnCode.OK, fileList);
+            return new Return<>(OK, fileList);
         } catch (Exception e) {
             log.error(e.getMessage());
             throw new RuntimeException(e);
@@ -122,11 +145,11 @@ public class GitController {
             var loader = gitOperation.getGitBlobLoader(repository, ref, path);
             if (loader == null) return new Return<>(ReturnCode.GIT_REPO_NON_EXIST);
             if (Utils.isBinaryFile(path) || loader.getSize() > 1024 * 1024L)
-                return new Return<>(ReturnCode.OK, new GitBlob(false, loader.getSize()));
+                return new Return<>(OK, new GitBlob(false, loader.getSize()));
             // too large file or binary file
             var blob = new GitBlob(true, loader.getSize());
             blob.content = new String(loader.openStream().readAllBytes());
-            return new Return<>(ReturnCode.OK, blob);
+            return new Return<>(OK, blob);
         } catch (Exception e) {
             log.error(e.getMessage());
             throw new RuntimeException(e);
@@ -193,7 +216,7 @@ public class GitController {
             if (returnObj == null) {
                 return new Return<>(ReturnCode.GIT_COMMIT_NO_FILE_CHANGED);
             }
-            return new Return<>(ReturnCode.OK, returnObj);
+            return new Return<>(OK, returnObj);
         } catch (Exception e) {
             log.error(e.getMessage());
             throw new RuntimeException(e);
