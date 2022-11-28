@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import tank.ooad.fitgub.entity.ci.CiWork;
 import tank.ooad.fitgub.entity.repo.Repo;
+import tank.ooad.fitgub.git.GitOperation;
 import tank.ooad.fitgub.service.CIService;
 import tank.ooad.fitgub.service.RepoService;
 import tank.ooad.fitgub.utils.AttributeKeys;
@@ -29,20 +30,49 @@ public class CIController {
     @Autowired
     private RepoService repoService;
 
+    @Autowired
+    private GitOperation gitOperation;
+
+//    @PostMapping("/api/repo/{userName}/{repoName}/ci/run")
+//    @RequireLogin
+//    public Return<String> runCI(@PathVariable String userName,
+//                                @PathVariable String repoName,
+//                                @RequestParam("file") MultipartFile file,
+//                                HttpSession httpSession) throws IOException {
+//        int currentUserId = (int) AttributeKeys.USER_ID.getValue(httpSession);
+//        Repo repo = repoService.getRepo(userName, repoName);
+//        if (!repoService.checkRepoWritePermission(repo, currentUserId)) {
+//            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+//        }
+//        ciService.runCI(repo.id, currentUserId, ciName, file.getInputStream());
+//        return new Return<>(OK, "Success");
+////        return new Return<>(OK, ciService.runCI(repo.id, currentUserId,file.getInputStream()));
+//    }
+
     @PostMapping("/api/repo/{userName}/{repoName}/ci/run")
     @RequireLogin
     public Return<String> runCI(@PathVariable String userName,
-                                      @PathVariable String repoName,
-                                      @RequestParam String ciName,
-                                      @RequestParam("file") MultipartFile file,
-                                      HttpSession httpSession) throws IOException {
+                                @PathVariable String repoName,
+                                @RequestParam String ref,
+                                @RequestParam String path,
+                                HttpSession httpSession) throws IOException {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(httpSession);
         Repo repo = repoService.getRepo(userName, repoName);
         if (!repoService.checkRepoWritePermission(repo, currentUserId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
-        ciService.runCI(repo.id, currentUserId, ciName,file.getInputStream());
-        return new Return<>(OK,"Success");
+        try {
+            path = "/.xynhub/" + path;
+            var loader = gitOperation.getGitBlobLoader(repo, ref, path);
+            // get an inputstream
+            ciService.runCI(repo.id, currentUserId, loader.openStream());
+//            ciService.runCI(repo.id, currentUserId, ciName,file.getInputStream());
+            return new Return<>(OK, "Success");
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            return new Return<>(ReturnCode.GIT_REPO_DOES_NOT_CONTAIN_FILE);
+        }
+
 //        return new Return<>(OK, ciService.runCI(repo.id, currentUserId, ciName,file.getInputStream()));
     }
 
@@ -72,7 +102,6 @@ public class CIController {
         }
         return new Return<>(OK, ciService.getCIOutput(id));
     }
-
 
 
 }

@@ -24,7 +24,7 @@ public class CIService {
     private JdbcTemplate jdbcTemplate;
 
     @Async
-    public void runCI(int repoId, int userId, String ciName, InputStream inputStream) throws IOException {
+    public void runCI(int repoId, int userId, InputStream inputStream) throws IOException {
         Yaml yaml = new Yaml();
         try {
 //            InputStream inputStream = new FileInputStream(path);
@@ -58,7 +58,7 @@ public class CIService {
                 CreateContainerResponse container = client.createContainerCmd("dgy/ci:v0.1").withCmd("sleep", "3").exec();
                 client.startContainerCmd(container.getId()).exec();
                 OutputStream outputStream = new FileOutputStream("src/main/docker-log/" + container.getId() + ".log");
-                jdbcTemplate.update("insert into ci_log (repo_id, user_id,ci_name,output_hash) values (?, ?, ?,?)", repoId, userId, ciName, container.getId());
+                jdbcTemplate.update("insert into ci_log (repo_id, user_id,ci_name,output_hash) values (?, ?, ?,?)", repoId, userId, ci.name, container.getId());
                 returnHash.add(container.getId());
                 System.out.println("container id: " + container.getId());
                 for (var step : job.steps) {
@@ -93,7 +93,7 @@ public class CIService {
             OutputStream outputStream = new FileOutputStream("src/main/docker-log/" + hash + ".log");
             outputStream.write("yaml file is not valid".getBytes());
             outputStream.close();
-            jdbcTemplate.update("insert into ci_log (repo_id, user_id,ci_name,output_hash) values (?, ?, ?,?)", repoId, userId, ciName, hash);
+            jdbcTemplate.update("insert into ci_log (repo_id, user_id,ci_name,output_hash) values (?, ?, ?,?)", repoId, userId, "failure", hash);
             CompletableFuture.completedFuture(Arrays.asList(hash));
         }
         CompletableFuture.completedFuture(null);

@@ -29,6 +29,7 @@ public enum ReturnCode {
     GIT_BRANCH_NON_EXIST(-2004, "Requested branch does not exist or it is already set"),
     GIT_FILE_NON_EXIST(-2005, "Requested file doesn't exist."),
     GIT_COMMIT_NO_FILE_CHANGED(-2006, "No file changed in this commit."),
+    GIT_REPO_DOES_NOT_CONTAIN_FILE(-2007, "Git repo does not contain this file."),
 
     ISSUE_INTERNAL_ERROR(-3000, "some internal error detected, please contact admins"),
     ISSUE_CLOSED(-3001, "issue closed"),
