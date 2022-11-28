@@ -64,6 +64,24 @@ public class GitController {
 //        return Return.OK;
     }
 
+    @GetMapping("/api/git/{ownerName}/{repoName}/commits/{ref}")
+    public Return<List<GitCommit>> getCommits(@PathVariable String ownerName, @PathVariable String repoName,
+                                              @PathVariable String ref, HttpSession session) throws IOException {
+        int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
+        // Resolve Repo
+        Repo repo = repoService.getRepo(ownerName, repoName);
+        // checkPermission: require Read
+        if (!repoService.checkRepoReadPermission(repo, currentUserId)) {
+            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+        }
+        try {
+            return new Return<>(ReturnCode.OK, gitOperation.getCommits(repo, ref));
+        } catch (Exception e) {
+//            throw new RuntimeException(e);
+            return new Return<>(ReturnCode.GIT_BRANCH_NON_EXIST);
+        }
+    }
+
     @GetMapping("/api/git/{ownerName}/{repoName}/tree/{ref}/{*path}")
     public Return<List<GitTreeEntry>> getTree(@PathVariable String ownerName,
                                               @PathVariable String repoName,
@@ -165,14 +183,14 @@ public class GitController {
         try {
             GitPerson committer = new GitPerson(committerName, committerEmail);
             Map<String, byte[]> contents = new HashMap<>();
-            for (var file:files) {
+            for (var file : files) {
                 contents.put(path + file.getOriginalFilename(), file.getBytes());
             }
             if (Objects.equals(message, "")) {
                 message = "Add file %s.".formatted(files[0].getName());
             }
             var returnObj = gitOperation.commit(repository, branch, committer, message, contents);
-            if (returnObj == null){
+            if (returnObj == null) {
                 return new Return<>(ReturnCode.GIT_COMMIT_NO_FILE_CHANGED);
             }
             return new Return<>(ReturnCode.OK, returnObj);

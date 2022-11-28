@@ -8,6 +8,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.MergeResult;
+import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.dircache.DirCache;
 import org.eclipse.jgit.dircache.DirCacheEditor;
 import org.eclipse.jgit.dircache.DirCacheEntry;
@@ -38,6 +39,27 @@ public class GitOperation {
     private static final String REPO_STORE_PATH = "../repo-store";
 
     private static final GitPerson xynhub = new GitPerson("xynhub", "ooad@dgy.ac.cn");
+
+    public List<GitCommit> getCommits(Repo repo, String ref) throws IOException, GitAPIException {
+        Repository repository = getRepository(repo);
+        var head = repository.resolve(ref);
+        Git git = new Git(repository);
+        RevWalk walk = new RevWalk(repository);
+        Iterable<RevCommit> commits = git.log().add(head).call();
+        List<GitCommit> gitCommits = new ArrayList<>();
+        for (RevCommit commit : commits) {
+            GitCommit gitCommit = new GitCommit();
+            gitCommit.commit_hash = commit.getName();
+            gitCommit.commit_message = commit.getFullMessage();
+            gitCommit.commit_time = commit.getCommitTime();
+            var author = commit.getAuthorIdent();
+            gitCommit.author = new GitPerson(author.getName(), author.getEmailAddress());
+            var committer = commit.getCommitterIdent();
+            gitCommit.committer = new GitPerson(committer.getName(), committer.getEmailAddress());
+            gitCommits.add(gitCommit);
+        }
+        return gitCommits;
+    }
 
     public record MergeBranch(int ownerId, int repoId, String branchName){}
     public record MergeRequest(MergeBranch from, MergeBranch to){}
