@@ -1,5 +1,8 @@
 package tank.ooad.fitgub.rest;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -184,5 +187,25 @@ public class RepoPrController {
         var merge = new GitOperation.MergeRequest(new GitOperation.MergeBranch(pull.pull.from.owner.id, pull.pull.from.id, pull.pull.from_branch),
                 new GitOperation.MergeBranch(pull.pull.to.owner.id, pull.pull.to.id, pull.pull.to_branch));
         return new Return<>(ReturnCode.OK, gitOperation.getMergeStatus(merge, pull));
+    }
+
+    @SneakyThrows
+    @RequireLogin
+    @PostMapping("/api/repo/{ownerName}/{repoName}/pull/{repoIssueId}/merge")
+    public Return<Boolean> merge(
+            @PathVariable String ownerName,
+            @PathVariable String repoName,
+            @PathVariable int repoIssueId,
+            @RequestBody String messageJson,
+            HttpSession httpsession) {
+        int currentUserId = (int) AttributeKeys.USER_ID.getValue(httpsession);
+        var repo = repoService.getRepo(ownerName, repoName);
+        if (!repoService.checkRepoWritePermission(repo,currentUserId)) return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+        var pull = repoIssueService.getPull(repo.id, repoIssueId, false);
+        var merge = new GitOperation.MergeRequest(new GitOperation.MergeBranch(pull.pull.from.owner.id, pull.pull.from.id, pull.pull.from_branch),
+                new GitOperation.MergeBranch(pull.pull.to.owner.id, pull.pull.to.id, pull.pull.to_branch));
+        JsonNode node = new ObjectMapper().readTree(messageJson);
+        var success = gitOperation.merge(merge, pull, node.get("message").asText());
+        return new Return<>(ReturnCode.OK, success);
     }
 }

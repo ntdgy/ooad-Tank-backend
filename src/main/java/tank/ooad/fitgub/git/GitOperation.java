@@ -14,6 +14,8 @@ import org.eclipse.jgit.dircache.DirCacheEditor;
 import org.eclipse.jgit.dircache.DirCacheEntry;
 import org.eclipse.jgit.internal.storage.file.FileRepository;
 import org.eclipse.jgit.lib.*;
+import org.eclipse.jgit.merge.ContentMergeStrategy;
+import org.eclipse.jgit.merge.MergeStrategy;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
@@ -379,22 +381,23 @@ public class GitOperation {
             break;
         }
         try {
-            log.info("check merge status at " + tempFolder);
-            Git copiedRepo =  Git.init().setBare(false).setDirectory(tempFolder).call();
-            try (var source = getRepository(mergeRequest.from.ownerId, mergeRequest.from.repoId);var target = getRepository(mergeRequest.from.ownerId, mergeRequest.from.repoId)) {
+            try (var source = getRepository(mergeRequest.from.ownerId, mergeRequest.from.repoId);var target = getRepository(mergeRequest.to.ownerId, mergeRequest.to.repoId)) {
                 var fromCommit = source.resolve(ret.from_branch);
                 if (fromCommit == null) {
                     ret.status = GitMergeStatus.Status.BRANCH_DELETED;
                     return ret;
                 }
                 ret.from_branch_commit = fromCommit.toString();
-                var toCommit = source.resolve(ret.to_branch);
+
+                var toCommit = target.resolve(ret.to_branch);
                 if (toCommit == null) {
                     ret.status = GitMergeStatus.Status.BRANCH_DELETED;
                     return ret;
                 }
                 ret.to_branch_commit = toCommit.toString();
             }
+            log.info("check merge status at " + tempFolder);
+            Git copiedRepo =  Git.init().setBare(false).setDirectory(tempFolder).call();
 
             var fromRepoPath = new File(REPO_STORE_PATH, String.format("%s/%s", mergeRequest.from.ownerId, mergeRequest.from.repoId));
             var toRepoPath = new File(REPO_STORE_PATH, String.format("%s/%s", mergeRequest.to.ownerId, mergeRequest.to.repoId));
@@ -414,6 +417,8 @@ public class GitOperation {
             var result = copiedRepo.merge()
                     .include(copiedRepo.getRepository().findRef("from"))
                     .setCommit(true)
+                    .setStrategy(MergeStrategy.RECURSIVE)
+                    .setContentMergeStrategy(ContentMergeStrategy.OURS)
                     .setMessage("Miao Miao Miao")
                     .call();
             log.info(result.toString());
@@ -427,6 +432,63 @@ public class GitOperation {
         } finally {
             FileUtil.del(tempFolder);
         }
+    }
+
+
+    @SneakyThrows
+    public boolean merge(MergeRequest mergeRequest, Issue pull, String message) {
+        File tempFolder;
+        while (true) {
+            tempFolder = new File(String.format("/tmp/merge-tmp-%s", UUID.randomUUID()));
+            if (tempFolder.exists()) continue;
+            tempFolder.mkdir();
+            break;
+        }
+        try (var source = getRepository(mergeRequest.from.ownerId, mergeRequest.from.repoId); var target = getRepository(mergeRequest.to.ownerId, mergeRequest.to.repoId)) {
+            var fromCommit = source.resolve(mergeRequest.from.branchName);
+            if (fromCommit == null) return false;
+            var toCommit = target.resolve(mergeRequest.to.branchName);
+            if (toCommit == null) return false;
+
+            log.info("check merge status at " + tempFolder);
+            Git copiedRepo = Git.init().setBare(false).setDirectory(tempFolder).call();
+            var fromRepoPath = new File(REPO_STORE_PATH, String.format("%s/%s", mergeRequest.from.ownerId, mergeRequest.from.repoId));
+            var toRepoPath = new File(REPO_STORE_PATH, String.format("%s/%s", mergeRequest.to.ownerId, mergeRequest.to.repoId));
+            copiedRepo.remoteAdd().setName("from").setUri(new URIish(fromRepoPath.getAbsolutePath())).call();
+            copiedRepo.fetch().setRemote("from").setInitialBranch(mergeRequest.from.branchName).call();
+            copiedRepo.checkout().setName("from").setCreateBranch(true).setStartPoint("from/" + mergeRequest.from.branchName).call();
+
+            copiedRepo.remoteAdd().setName("into").setUri(new URIish(toRepoPath.getAbsolutePath())).call();
+            copiedRepo.fetch().setRemote("into").setInitialBranch(mergeRequest.to.branchName).call();
+            copiedRepo.checkout().setName("into").setCreateBranch(true).setStartPoint("into/" + mergeRequest.to.branchName).call();
+
+            Config config = copiedRepo.getRepository().getConfig();
+            config.setBoolean(ConfigConstants.CONFIG_COMMIT_SECTION, null,
+                    ConfigConstants.CONFIG_KEY_GPGSIGN, false);
+            config.setString(ConfigConstants.CONFIG_USER_SECTION, null, ConfigConstants.CONFIG_KEY_NAME, "xynHub");
+            config.setString(ConfigConstants.CONFIG_USER_SECTION, null, ConfigConstants.CONFIG_KEY_EMAIL, "ooad@ooad.dgy.ac.cn");
+            var result = copiedRepo.merge()
+                    .include(copiedRepo.getRepository().findRef("from"))
+                    .setCommit(true)
+                    .setStrategy(MergeStrategy.RECURSIVE)
+                    .setContentMergeStrategy(ContentMergeStrategy.OURS)
+                    .setMessage(message)
+                    .call();
+            log.info(result.toString());
+            if (result.getMergeStatus().isSuccessful()) {
+                var newHead = result.getNewHead();
+                log.info("merged head: " + newHead);
+                copyCommits(copiedRepo.getRepository(), target, newHead);
+                var update = target.getRefDatabase().newUpdate("refs/heads/" + mergeRequest.to.branchName, false);
+                update.setNewObjectId(newHead);
+                update.update();
+                return true;
+            }
+            return false;
+        } finally {
+            FileUtil.del(tempFolder);
+        }
+
     }
 
     public static void copyCommits(Repository from, Repository to, ObjectId commitId) throws IOException {
