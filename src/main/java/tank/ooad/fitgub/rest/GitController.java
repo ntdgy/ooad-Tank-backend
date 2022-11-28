@@ -165,7 +165,7 @@ public class GitController {
             }
             var returnObj = gitOperation.commit(repository, branch, committer, message, contents);
             if (returnObj == null){
-                return new Return<>(ReturnCode.GIT_COMMIT_DUPLICATE);
+                return new Return<>(ReturnCode.GIT_COMMIT_NO_FILE_CHANGED);
             }
             return new Return<>(ReturnCode.OK, returnObj);
         } catch (Exception e) {
