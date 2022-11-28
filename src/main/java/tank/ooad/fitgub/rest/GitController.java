@@ -1,7 +1,10 @@
 package tank.ooad.fitgub.rest;
 
+import cn.hutool.core.io.FileUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
@@ -129,7 +132,10 @@ public class GitController {
         try {
             var loader = gitOperation.getGitBlobLoader(repository, ref, path);
             try (var istream = loader.openStream()) {
+                var header = new HttpHeaders();
+                header.setContentDisposition(ContentDisposition.inline().filename(FileUtil.getName(path)).build());
                 return ResponseEntity.ok()
+                        .headers(header)
                         .contentType(MediaType.APPLICATION_OCTET_STREAM)
                         .body(new InputStreamResource(istream));
             }
