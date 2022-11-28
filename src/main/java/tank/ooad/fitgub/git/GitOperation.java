@@ -488,8 +488,45 @@ public class GitOperation {
         } finally {
             FileUtil.del(tempFolder);
         }
+    }
+
+    @SneakyThrows
+    public boolean revert(Repo repo, String branchName, String revertedCommitHash) {
+        File tempFolder;
+        while (true) {
+            tempFolder = new File(String.format("/tmp/merge-tmp-%s", UUID.randomUUID()));
+            if (tempFolder.exists()) continue;
+            tempFolder.mkdir();
+            break;
+        }
+        try (var target = getRepository(repo)) {
+            log.info("revert at " + tempFolder);
+            Git copiedRepo = Git.init().setBare(false).setDirectory(tempFolder).call();
+            copiedRepo.remoteAdd().setName("from").setUri(new URIish(target.getDirectory().getAbsolutePath())).call();
+            copiedRepo.fetch().setRemote("from").setInitialBranch(branchName).call();
+            copiedRepo.checkout().setName("from").setCreateBranch(true).setStartPoint("from/" + branchName).call();
+
+            Config config = copiedRepo.getRepository().getConfig();
+            config.setBoolean(ConfigConstants.CONFIG_COMMIT_SECTION, null,
+                    ConfigConstants.CONFIG_KEY_GPGSIGN, false);
+            config.setString(ConfigConstants.CONFIG_USER_SECTION, null, ConfigConstants.CONFIG_KEY_NAME, "xynHub");
+            config.setString(ConfigConstants.CONFIG_USER_SECTION, null, ConfigConstants.CONFIG_KEY_EMAIL, "ooad@ooad.dgy.ac.cn");
+            var newHead = copiedRepo.revert()
+                    .include(target.resolve(revertedCommitHash))
+                    .call();
+
+            copyCommits(copiedRepo.getRepository(), target, newHead);
+            var update = target.getRefDatabase().newUpdate("refs/heads/" + branchName, false);
+            update.setNewObjectId(newHead);
+            update.update();
+            return true;
+
+        } finally {
+            FileUtil.del(tempFolder);
+        }
 
     }
+
 
     public static void copyCommits(Repository from, Repository to, ObjectId commitId) throws IOException {
         try (var toReader = to.getObjectDatabase().newReader(); var fromReader = from.getObjectDatabase().newReader(); var toWriter = to.getObjectDatabase().newInserter()) {
