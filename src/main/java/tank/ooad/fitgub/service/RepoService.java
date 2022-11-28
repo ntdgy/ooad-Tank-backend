@@ -414,7 +414,7 @@ public class RepoService {
                        repo.owner_id as repo_owner_id, uo.name as repo_owner_name, uo.email as repo_owner_email
                 from repo
                          join users uo on repo.owner_id = uo.id
-                where repo.name like ? or repo.description like ? and repo.visible = 0
+                where (repo.name like ? or repo.description like ?) and repo.visible = 0
                 """, Repo.mapper, "%" + keyword + "%", "%" + keyword + "%");
     }
 
