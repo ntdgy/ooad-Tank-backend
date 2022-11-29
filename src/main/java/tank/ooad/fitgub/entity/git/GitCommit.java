@@ -6,7 +6,6 @@ import java.util.Date;
 import java.util.List;
 
 public class GitCommit {
-    public String name;
     public String commit_hash;
     public String commit_message;
     public GitPerson committer;
