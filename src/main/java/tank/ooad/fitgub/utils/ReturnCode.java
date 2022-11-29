@@ -48,7 +48,8 @@ public enum ReturnCode {
     REPO_ALREADY_UNWATCHED(-4008, "repo is already unwatched"),
     REPO_ALREADY_FORKED(-4009, "repo is already forked"),
     REPO_ALREADY_UNFORKED(-4010, "repo is already unforked"),
-    REPO_PAGE_ALREADY_EXIST(-4011,"pages already up");
+    REPO_PAGE_ALREADY_EXIST(-4011,"pages already up"),
+    COMMIT_NON_EXIST(-2010, "commit doesn't exist.");
 
 
 

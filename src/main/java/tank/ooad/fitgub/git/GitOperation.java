@@ -28,6 +28,8 @@ import org.springframework.stereotype.Component;
 import tank.ooad.fitgub.entity.git.*;
 import tank.ooad.fitgub.entity.repo.Issue;
 import tank.ooad.fitgub.entity.repo.Repo;
+import tank.ooad.fitgub.exception.CustomException;
+import tank.ooad.fitgub.utils.ReturnCode;
 
 import java.io.File;
 import java.io.IOException;
@@ -596,36 +598,32 @@ public class GitOperation {
 
     @SneakyThrows
     private void buildIndexRecursively(Repo repo, Repository repository, ObjectId commitHash) {
-        Stack<ObjectId> commits = new Stack<>();
-        commits.push(commitHash);
-        while (!commits.isEmpty()) {
-            ObjectId currentCommit = commits.pop();
-            if (indexExists(repo, currentCommit.toObjectId().getName())) continue;
+        if (indexExists(repo, commitHash.getName())) return;
 
-            RevCommit commit = new RevWalk(repository).parseCommit(currentCommit);
-            for (RevCommit parent : commit.getParents()) commits.push(parent.getId());
-            // Check Tree
-            try (TreeWalk walk = new TreeWalk(repository)) {
-                RevTree rootTree = new RevWalk(repository).parseCommit(currentCommit).getTree();
-                if (treeBlobIndexExists(repo, rootTree.toObjectId().getName())) continue;
-                walk.setRecursive(false);
-                walk.reset(rootTree);
-                MutableObjectId objectId = new MutableObjectId();
-                while (walk.next()) {
-                    walk.getObjectId(objectId, 0);
-                    if (treeBlobIndexExists(repo, objectId.getName())) continue;
-                    String parentHash = commit.getParents().length == 0 ? "" : commit.getParents()[0].getName();
-                    if (walk.isSubtree()) {
-                        log.info("test tree for " + walk.getPathString() + " in object " + objectId);
-                        insertIndex(repo, objectId.getName(), walk.getPathString() + "/", commit.getName(), parentHash);
-                        walk.enterSubtree();
-                    } else {
-                        log.info("test blob for " + walk.getPathString() + " in object " + objectId);
-                        insertIndex(repo, objectId.getName(), walk.getPathString(), commit.getName(), parentHash);
-                    }
+        RevCommit commit = new RevWalk(repository).parseCommit(commitHash);
+        for (RevCommit parent : commit.getParents()) buildIndexRecursively(repo, repository, parent.getId());
+        // Check Tree
+        String parentHash = commit.getParents().length == 0 ? "" : commit.getParents()[0].getName();
+        try (TreeWalk walk = new TreeWalk(repository)) {
+            RevTree rootTree = new RevWalk(repository).parseCommit(commitHash).getTree();
+            if (treeBlobIndexExists(repo, rootTree.getName())) return;
+            walk.setRecursive(false);
+            walk.reset(rootTree);
+            MutableObjectId objectId = new MutableObjectId();
+            while (walk.next()) {
+                walk.getObjectId(objectId, 0);
+                if (treeBlobIndexExists(repo, objectId.getName())) continue;
+                if (walk.isSubtree()) {
+                    log.info("test tree for " + walk.getPathString() + " in object " + objectId);
+                    insertIndex(repo, objectId.getName(), walk.getPathString() + "/", commit.getName(), parentHash);
+                    walk.enterSubtree();
+                } else {
+                    log.info("test blob for " + walk.getPathString() + " in object " + objectId);
+                    insertIndex(repo, objectId.getName(), walk.getPathString(), commit.getName(), parentHash);
                 }
             }
         }
+
     }
 
     private boolean indexExists(Repo repo, String commitHash) {
@@ -638,4 +636,39 @@ public class GitOperation {
     private void insertIndex(Repo repo, String treeOrBlobHash, String path, String commitHash, String parentCommitHash) {
         template.update("insert into commit_index(repo_id, file_path, blob_or_tree_hash, commit_hash, parent_commit_hash) VALUES (?,?,?,?,?)", repo.id, path, treeOrBlobHash, commitHash, parentCommitHash);
     }
+
+    @SneakyThrows
+    public GitCommit getCommitWithDiff(Repo repo, String hash) {
+        if (!indexExists(repo, hash)) {
+            buildRepoIndex(repo);
+            if (!indexExists(repo,hash )) throw new CustomException(ReturnCode.COMMIT_NON_EXIST);
+        }
+        try (var repository = getRepository(repo)) {
+            RevWalk walk = new RevWalk(repository);
+            RevCommit commit = walk.parseCommit(repository.resolve(hash));
+            GitCommit gitCommit = new GitCommit();
+            gitCommit.commit_hash = commit.getName();
+            gitCommit.commit_message = commit.getFullMessage();
+            gitCommit.commit_time = commit.getCommitTime();
+            var author = commit.getAuthorIdent();
+            gitCommit.author = new GitPerson(author.getName(), author.getEmailAddress());
+            var committer = commit.getCommitterIdent();
+            gitCommit.committer = new GitPerson(committer.getName(), committer.getEmailAddress());
+            // Fill Diffs
+            gitCommit.diffList = new ArrayList<>();
+            var changedFiles = template.queryForList("select * from commit_index where commit_hash = ? and file_path NOT LIKE '%/'", gitCommit.commit_hash);
+            for (Map<String, Object> changedFile : changedFiles) {
+                GitCommit.Diff diff = new GitCommit.Diff();
+                diff.file_path = (String) changedFile.get("file_path");
+                diff.current = new String(getGitBlobLoader(repo, gitCommit.commit_hash,"/" +  diff.file_path).getCachedBytes());
+                var originLoader = getGitBlobLoader(repo, (String) changedFile.get("parent_commit_hash"), "/" + diff.file_path);
+                if (originLoader != null)
+                    diff.origin = new String(originLoader.getCachedBytes());
+                else diff.origin = "";
+                gitCommit.diffList.add(diff);
+            }
+            return gitCommit;
+        }
+    }
+
 }

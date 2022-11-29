@@ -84,6 +84,20 @@ public class GitController {
         }
     }
 
+    @GetMapping("/api/git/{ownerName}/{repoName}/commit/{hash}")
+    public Return<GitCommit> getCommitDiff(@PathVariable String ownerName, @PathVariable String repoName, @PathVariable String hash, HttpSession session) {
+        int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
+        // Resolve Repo
+        Repo repo = repoService.getRepo(ownerName, repoName);
+        // checkPermission: require Write
+        if (!repoService.checkRepoReadPermission(repo, currentUserId)) {
+            return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
+        }
+        GitCommit commit = gitOperation.getCommitWithDiff(repo, hash);
+        return new Return<>(OK, commit);
+    }
+
+
     @PostMapping("/api/git/{ownerName}/{repoName}/commits/{ref}/revert")
     @RequireLogin
     public Return<Boolean> revertCommits(@PathVariable String ownerName, @PathVariable String repoName,
