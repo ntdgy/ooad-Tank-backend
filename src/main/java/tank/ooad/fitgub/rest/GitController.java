@@ -222,5 +222,12 @@ public class GitController {
             throw new RuntimeException(e);
         }
     }
-
+    @PostMapping("/api/git/{ownerName}/{repoName}/build_index")
+    public Return<Void> buildIndex(@PathVariable String ownerName,
+                                        @PathVariable String repoName,
+                                        HttpSession session) {
+        Repo repository = repoService.getRepo(ownerName, repoName);
+        gitOperation.buildRepoIndex(repository);
+        return Return.OK;
+    }
 }

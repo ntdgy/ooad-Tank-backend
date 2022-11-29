@@ -22,6 +22,8 @@ import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.transport.URIish;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.eclipse.jgit.treewalk.TreeWalk;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import tank.ooad.fitgub.entity.git.*;
 import tank.ooad.fitgub.entity.repo.Issue;
@@ -37,6 +39,9 @@ import java.util.function.BiConsumer;
 @Component
 @Slf4j
 public class GitOperation {
+    
+    @Autowired
+    private JdbcTemplate template;
 
     private static final String REPO_STORE_PATH = "../repo-store";
 
@@ -574,5 +579,63 @@ public class GitOperation {
                 }
             }
         }
+    }
+
+    @SneakyThrows
+    public void buildRepoIndex(Repo repo) {
+        try (var repository = getRepository(repo)) {
+            var branches = repository.getRefDatabase().getRefsByPrefix("refs/heads/").stream().map(Ref::getName).map((str) -> StringUtils.removeStart(str, "refs/heads/")).toList();
+            for (String branch : branches) {
+                var headCommit = repository.resolve(branch);
+                if (indexExists(repo, headCommit.getName())) continue;
+                // build index for headCommit
+                buildIndexRecursively(repo, repository, headCommit);
+            }
+        }
+    }
+
+    @SneakyThrows
+    private void buildIndexRecursively(Repo repo, Repository repository, ObjectId commitHash) {
+        Stack<ObjectId> commits = new Stack<>();
+        commits.push(commitHash);
+        while (!commits.isEmpty()) {
+            ObjectId currentCommit = commits.pop();
+            if (indexExists(repo, currentCommit.toObjectId().getName())) continue;
+
+            RevCommit commit = new RevWalk(repository).parseCommit(currentCommit);
+            for (RevCommit parent : commit.getParents()) commits.push(parent.getId());
+            // Check Tree
+            try (TreeWalk walk = new TreeWalk(repository)) {
+                RevTree rootTree = new RevWalk(repository).parseCommit(currentCommit).getTree();
+                if (treeBlobIndexExists(repo, rootTree.toObjectId().getName())) continue;
+                walk.setRecursive(false);
+                walk.reset(rootTree);
+                MutableObjectId objectId = new MutableObjectId();
+                while (walk.next()) {
+                    walk.getObjectId(objectId, 0);
+                    if (treeBlobIndexExists(repo, objectId.getName())) continue;
+                    String parentHash = commit.getParents().length == 0 ? "" : commit.getParents()[0].getName();
+                    if (walk.isSubtree()) {
+                        log.info("test tree for " + walk.getPathString() + " in object " + objectId);
+                        insertIndex(repo, objectId.getName(), walk.getPathString() + "/", commit.getName(), parentHash);
+                        walk.enterSubtree();
+                    } else {
+                        log.info("test blob for " + walk.getPathString() + " in object " + objectId);
+                        insertIndex(repo, objectId.getName(), walk.getPathString(), commit.getName(), parentHash);
+                    }
+                }
+            }
+        }
+    }
+
+    private boolean indexExists(Repo repo, String commitHash) {
+        return template.queryForObject("select count(*)>0 from commit_index where repo_id = ? and commit_hash = ?;", Boolean.class, repo.id, commitHash);
+    }
+    private boolean treeBlobIndexExists(Repo repo, String treeOrBlobHash) {
+        return template.queryForObject("select count(*)>0 from commit_index where repo_id = ? and blob_or_tree_hash = ?;", Boolean.class, repo.id, treeOrBlobHash);
+    }
+
+    private void insertIndex(Repo repo, String treeOrBlobHash, String path, String commitHash, String parentCommitHash) {
+        template.update("insert into commit_index(repo_id, file_path, blob_or_tree_hash, commit_hash, parent_commit_hash) VALUES (?,?,?,?,?)", repo.id, path, treeOrBlobHash, commitHash, parentCommitHash);
     }
 }
