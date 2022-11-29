@@ -418,7 +418,6 @@ public class GitOperation {
                     .include(copiedRepo.getRepository().findRef("from"))
                     .setCommit(true)
                     .setStrategy(MergeStrategy.RECURSIVE)
-                    .setContentMergeStrategy(ContentMergeStrategy.OURS)
                     .setMessage("Miao Miao Miao")
                     .call();
             log.info(result.toString());
@@ -471,7 +470,6 @@ public class GitOperation {
                     .include(copiedRepo.getRepository().findRef("from"))
                     .setCommit(true)
                     .setStrategy(MergeStrategy.RECURSIVE)
-                    .setContentMergeStrategy(ContentMergeStrategy.OURS)
                     .setMessage(message)
                     .call();
             log.info(result.toString());
