@@ -97,6 +97,10 @@ public class RepoIssueService {
         jdbcTemplate.update("update issue set status = 'closed' where id = ?;", issueId);
     }
 
+    public void mergeIssue(int issueId) {
+        jdbcTemplate.update("update issue set status = 'merged' where id = ?;", issueId);
+    }
+
     public void reopenIssue(int issueId) {
         jdbcTemplate.update("update issue set status = 'open' where id = ?;", issueId);
     }

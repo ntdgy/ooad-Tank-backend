@@ -206,6 +206,8 @@ public class RepoPrController {
                 new GitOperation.MergeBranch(pull.pull.to.owner.id, pull.pull.to.id, pull.pull.to_branch));
         JsonNode node = new ObjectMapper().readTree(messageJson);
         var success = gitOperation.merge(merge, pull, node.get("message").asText());
+        pull.status = "merged";
+        repoIssueService.mergeIssue(pull.id);
         return new Return<>(ReturnCode.OK, success);
     }
 }
