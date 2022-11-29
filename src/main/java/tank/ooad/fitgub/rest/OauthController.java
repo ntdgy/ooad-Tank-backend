@@ -65,7 +65,7 @@ public class OauthController {
                 return Return.OK;
             }
             AttributeKeys.USER_ID.setValue(session, valid);
-            response.sendRedirect("http://192.168.1.175:5173/");
+            response.sendRedirect("https://ooad.dgy.ac.cn");
             return Return.OK;
         } catch (JsonProcessingException e) {
             e.printStackTrace();
