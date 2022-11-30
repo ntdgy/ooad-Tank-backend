@@ -68,7 +68,7 @@ public class RepoPrController {
             throw new CustomException(ReturnCode.SERVER_INTERNAL_ERROR);
         }
         repoIssueService.insertPullRequest(issueId, issue.pull);
-        List<String> receivers = repoService.getRepoWatchers(repo.id);
+        List<String> receivers = repoService.getRepoWatchers(repo);
         mailService.sendNewPrNotification(receivers, repo.name, issue.title);
         return new Return<>(ReturnCode.OK, issueIds.getValue());
     }

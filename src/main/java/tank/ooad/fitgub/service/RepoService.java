@@ -437,9 +437,12 @@ public class RepoService {
         System.out.println(result);
     }
 
-    public List<String> getRepoWatchers(int id) {
-        return template.query("""
+    public List<String> getRepoWatchers(Repo repo) {
+        var lst = new ArrayList<String>();
+        lst.addAll(template.query("""
                 select u.email from watch w join users u on w.user_id = u.id where w.repo_id = ?
-                """, (rs, rowNum) -> rs.getString("email"), id);
+                """, (rs, rowNum) -> rs.getString("email"), repo.id));
+        lst.add(repo.owner.email);
+        return lst;
     }
 }

@@ -48,7 +48,7 @@ public class RepoIssueController {
         for (var content : issue.contents) {
             repoIssueService.insertIssueContent(issueId, userId, content);
         }
-        List<String> receivers = repoService.getRepoWatchers(repo.id);
+        List<String> receivers = repoService.getRepoWatchers(repo);
         System.out.println(receivers);
         mailService.sendNewIssueNotification(receivers, repo.name, issue.title);
         return new Return<>(ReturnCode.OK, issueIds.getValue());
