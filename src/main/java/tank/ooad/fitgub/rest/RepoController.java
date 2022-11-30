@@ -111,6 +111,7 @@ public class RepoController {
         repoMetaData.starred = repo.starred;
         repoMetaData.watched = repo.watched;
         repoMetaData.self = repo;
+        repoMetaData.contributors = repoService.getRepoCollaborators(repo.owner.id, repoName);
         return new Return<>(ReturnCode.OK, repoMetaData);
     }
 

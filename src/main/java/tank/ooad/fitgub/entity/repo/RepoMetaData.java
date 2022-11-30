@@ -17,7 +17,7 @@ public class RepoMetaData {
     public int star;
     public int fork;
     public int watch;
-    public List<User> contributors = List.of();
+    public List<RepoCollaborator> contributors = List.of();
 
     public Boolean starred;
     public Boolean watched;
