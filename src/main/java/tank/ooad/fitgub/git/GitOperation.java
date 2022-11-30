@@ -177,8 +177,7 @@ public class GitOperation {
             if (treeWalk.isSubtree())
                 entry.name += "/";
             files.add(entry);
-            var objHash = treeWalk.getObjectId(0).getName();
-            var modify_commit = findLastModifiedCommit(repo, path + entry.name, commit);
+            var modify_commit = findLastModifiedCommit(repo, treeWalk.getPathString(), commit);
             if (modify_commit != null)
                 entry.modify_commit = getCommit(repo, modify_commit, false);
         }
