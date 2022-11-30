@@ -622,7 +622,8 @@ public class GitOperation {
                 gitCommit.diffList = new ArrayList<>();
                 DiffFormatter df = new DiffFormatter(NullOutputStream.INSTANCE);
                 df.setRepository(repository);
-                var changes = df.scan(commit.getParents()[0], commit);
+                var parent = commit.getParentCount() > 0 ? commit.getParent(0) : null;
+                var changes = df.scan(parent, commit);
                 for (DiffEntry change : changes) {
                     GitCommit.Diff diff = new GitCommit.Diff();
                     diff.file_path = change.getNewPath().equals("/dev/null") ? change.getOldPath() : change.getNewPath();
