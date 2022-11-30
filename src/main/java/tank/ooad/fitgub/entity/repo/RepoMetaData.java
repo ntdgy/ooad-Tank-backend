@@ -10,6 +10,7 @@ import tank.ooad.fitgub.utils.MyConfig;
 import java.util.List;
 
 public class RepoMetaData {
+    public Repo self;
     public User owner;
     public String name;
     public String description;

@@ -110,6 +110,7 @@ public class RepoController {
         repoService.fillStarAndWatch(repo, currentUserId);
         repoMetaData.starred = repo.starred;
         repoMetaData.watched = repo.watched;
+        repoMetaData.self = repo;
         return new Return<>(ReturnCode.OK, repoMetaData);
     }
 
