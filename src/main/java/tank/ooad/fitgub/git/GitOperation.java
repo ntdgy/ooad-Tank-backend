@@ -178,7 +178,7 @@ public class GitOperation {
                 entry.name += "/";
             files.add(entry);
             var objHash = treeWalk.getObjectId(0).getName();
-            var modify_commit = findLastModifiedCommit(repo, entry.name, commit);
+            var modify_commit = findLastModifiedCommit(repo, path + entry.name, commit);
             if (modify_commit != null)
                 entry.modify_commit = getCommit(repo, modify_commit, false);
         }
@@ -188,11 +188,13 @@ public class GitOperation {
 
     @SneakyThrows
     private String findLastModifiedCommit(Repo repo, String filePath, ObjectId untilCommit) {
+        filePath = StringUtils.removeStart(filePath, "/");
         Repository repository = getRepository(repo);
         Git git = new Git(repository);
-        var ret = git.log().add(untilCommit).addPath(filePath).setMaxCount(1).call().iterator();
-        if (ret.hasNext())
-            return ret.next().getName();
+        var ret = git.log().add(untilCommit).addPath(filePath).setMaxCount(1).call();
+        for (RevCommit revCommit : ret) {
+            return revCommit.getName();
+        }
         return null;
     }
 
