@@ -171,6 +171,9 @@ public class GitOperation {
                 entry.name += "/";
             files.add(entry);
             var objHash = treeWalk.getObjectId(0).getName();
+            if (!treeBlobIndexExists(repo, objHash)) {
+                buildRepoIndex(repo);
+            }
             if (treeBlobIndexExists(repo, objHash)) {
                 var modify_commit = template.queryForObject("select commit_hash from commit_index where repo_id = ? and blob_or_tree_hash = ?;", String.class, repo.id, objHash);
                 entry.modify_commit = getCommitFromIndex(repo, modify_commit, false);
