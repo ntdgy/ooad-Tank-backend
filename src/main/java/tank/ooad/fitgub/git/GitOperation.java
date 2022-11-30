@@ -73,7 +73,8 @@ public class GitOperation {
     public GitCommit getHeadCommit(Repo repo, String ref) {
         Repository repository = getRepository(repo);
         var head = repository.resolve(ref);
-        RevCommit commit = repository.parseCommit(repository.resolve("refs/heads/" + ref));
+        if (head == null) throw new CustomException(ReturnCode.GIT_BRANCH_NON_EXIST);
+        RevCommit commit = repository.parseCommit(head);
         GitCommit gitCommit = new GitCommit();
         gitCommit.commit_hash = commit.getName();
         gitCommit.commit_message = commit.getFullMessage();
