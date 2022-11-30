@@ -641,7 +641,12 @@ public class GitOperation {
     public GitCommit getCommitWithDiff(Repo repo, String hash) {
         if (!indexExists(repo, hash)) {
             buildRepoIndex(repo);
-            if (!indexExists(repo,hash )) throw new CustomException(ReturnCode.COMMIT_NON_EXIST);
+            if (!indexExists(repo, hash)) {
+                try (var repository = getRepository(repo)) {
+                    if (repository.resolve(hash) == null)
+                        throw new CustomException(ReturnCode.COMMIT_NON_EXIST);
+                }
+            }
         }
         try (var repository = getRepository(repo)) {
             RevWalk walk = new RevWalk(repository);
