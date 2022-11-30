@@ -255,7 +255,7 @@ public class RepoService {
                        repo.name           as repo_name,
                        repo.description    as repo_description,
                        repo.stars          as repo_stars,
-                       repo.forks          as repo_forks,
+                       (select count(*) from repo rr where rr.forked_from_id = repo.id) as repo_forks,
                        repo.watchs         as repo_watchers,
                        repo.forked_from_id as forked_from_id,
                        repo."hasPage" as hasPage           
