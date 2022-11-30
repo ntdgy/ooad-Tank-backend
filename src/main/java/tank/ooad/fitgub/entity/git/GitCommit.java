@@ -2,7 +2,6 @@ package tank.ooad.fitgub.entity.git;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
-import java.util.Date;
 import java.util.List;
 
 public class GitCommit {
@@ -14,6 +13,7 @@ public class GitCommit {
 
     public static class Diff {
         public String file_path;
+        public boolean is_text;
         public String origin;
         public String current;
     }

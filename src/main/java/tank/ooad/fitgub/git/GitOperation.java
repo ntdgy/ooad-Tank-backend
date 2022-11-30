@@ -28,6 +28,7 @@ import tank.ooad.fitgub.entity.repo.Issue;
 import tank.ooad.fitgub.entity.repo.Repo;
 import tank.ooad.fitgub.exception.CustomException;
 import tank.ooad.fitgub.utils.ReturnCode;
+import tank.ooad.fitgub.utils.Utils;
 
 import java.io.File;
 import java.io.IOException;
@@ -669,7 +670,11 @@ public class GitOperation {
                 for (Map<String, Object> changedFile : changedFiles) {
                     GitCommit.Diff diff = new GitCommit.Diff();
                     diff.file_path = (String) changedFile.get("file_path");
-                    diff.current = new String(getGitBlobLoader(repo, gitCommit.commit_hash, "/" + diff.file_path).getCachedBytes());
+                    var currentLoader = getGitBlobLoader(repo, gitCommit.commit_hash, "/" + diff.file_path);
+                    if (!(Utils.isBinaryFile(diff.file_path) || currentLoader.getSize() > 1024 * 1024L)) {
+                        diff.current = new String(currentLoader.getCachedBytes());
+                        diff.is_text = true;
+                    } else diff.is_text = false;
                     diff.origin = "";
                     if (!changedFile.get("parent_commit_hash").equals("")) {
                         var originLoader = getGitBlobLoader(repo, (String) changedFile.get("parent_commit_hash"), "/" + diff.file_path);
