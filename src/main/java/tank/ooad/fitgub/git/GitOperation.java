@@ -7,14 +7,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.MergeResult;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.dircache.DirCache;
 import org.eclipse.jgit.dircache.DirCacheEditor;
 import org.eclipse.jgit.dircache.DirCacheEntry;
 import org.eclipse.jgit.internal.storage.file.FileRepository;
 import org.eclipse.jgit.lib.*;
-import org.eclipse.jgit.merge.ContentMergeStrategy;
 import org.eclipse.jgit.merge.MergeStrategy;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
@@ -167,10 +165,15 @@ public class GitOperation {
             }
         }
         while (treeWalk.next() && treeWalk.getDepth() == len - 1) {
-            if (treeWalk.isSubtree()) {
-                files.add(new GitTreeEntry(treeWalk.getNameString() + "/"));
-            } else
-                files.add(new GitTreeEntry(treeWalk.getNameString()));
+            var entry = new GitTreeEntry(treeWalk.getNameString());
+            if (treeWalk.isSubtree())
+                entry.name += "/";
+            files.add(entry);
+            var objHash = treeWalk.getObjectId(0).getName();
+            if (treeBlobIndexExists(repo, objHash)) {
+                var modify_commit = template.queryForObject("select commit_hash from commit_index where repo_id = ? and blob_or_tree_hash = ?;", String.class, repo.id, objHash);
+                entry.modify_commit = getCommitFromIndex(repo, modify_commit, false);
+            }
         }
         treeWalk.close();
         return files;
@@ -638,7 +641,7 @@ public class GitOperation {
     }
 
     @SneakyThrows
-    public GitCommit getCommitWithDiff(Repo repo, String hash) {
+    public GitCommit getCommitFromIndex(Repo repo, String hash, boolean containsDiff) {
         if (!indexExists(repo, hash)) {
             buildRepoIndex(repo);
             if (!indexExists(repo, hash)) {
@@ -660,19 +663,21 @@ public class GitOperation {
             var committer = commit.getCommitterIdent();
             gitCommit.committer = new GitPerson(committer.getName(), committer.getEmailAddress());
             // Fill Diffs
-            gitCommit.diffList = new ArrayList<>();
-            var changedFiles = template.queryForList("select * from commit_index where commit_hash = ? and file_path NOT LIKE '%/'", gitCommit.commit_hash);
-            for (Map<String, Object> changedFile : changedFiles) {
-                GitCommit.Diff diff = new GitCommit.Diff();
-                diff.file_path = (String) changedFile.get("file_path");
-                diff.current = new String(getGitBlobLoader(repo, gitCommit.commit_hash,"/" +  diff.file_path).getCachedBytes());
-                diff.origin = "";
-                if (!changedFile.get("parent_commit_hash").equals("")) {
-                    var originLoader = getGitBlobLoader(repo, (String) changedFile.get("parent_commit_hash"), "/" + diff.file_path);
-                    if (originLoader != null)
-                        diff.origin = new String(originLoader.getCachedBytes());
+            if (containsDiff) {
+                gitCommit.diffList = new ArrayList<>();
+                var changedFiles = template.queryForList("select * from commit_index where commit_hash = ? and file_path NOT LIKE '%/'", gitCommit.commit_hash);
+                for (Map<String, Object> changedFile : changedFiles) {
+                    GitCommit.Diff diff = new GitCommit.Diff();
+                    diff.file_path = (String) changedFile.get("file_path");
+                    diff.current = new String(getGitBlobLoader(repo, gitCommit.commit_hash, "/" + diff.file_path).getCachedBytes());
+                    diff.origin = "";
+                    if (!changedFile.get("parent_commit_hash").equals("")) {
+                        var originLoader = getGitBlobLoader(repo, (String) changedFile.get("parent_commit_hash"), "/" + diff.file_path);
+                        if (originLoader != null)
+                            diff.origin = new String(originLoader.getCachedBytes());
+                    }
+                    gitCommit.diffList.add(diff);
                 }
-                gitCommit.diffList.add(diff);
             }
             return gitCommit;
         }

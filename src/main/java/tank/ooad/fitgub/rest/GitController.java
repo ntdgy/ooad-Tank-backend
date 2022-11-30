@@ -93,7 +93,7 @@ public class GitController {
         if (!repoService.checkRepoReadPermission(repo, currentUserId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
-        GitCommit commit = gitOperation.getCommitWithDiff(repo, hash);
+        GitCommit commit = gitOperation.getCommitFromIndex(repo, hash, true);
         return new Return<>(OK, commit);
     }
 
