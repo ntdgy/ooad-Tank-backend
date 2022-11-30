@@ -666,10 +666,12 @@ public class GitOperation {
                 GitCommit.Diff diff = new GitCommit.Diff();
                 diff.file_path = (String) changedFile.get("file_path");
                 diff.current = new String(getGitBlobLoader(repo, gitCommit.commit_hash,"/" +  diff.file_path).getCachedBytes());
-                var originLoader = getGitBlobLoader(repo, (String) changedFile.get("parent_commit_hash"), "/" + diff.file_path);
-                if (originLoader != null)
-                    diff.origin = new String(originLoader.getCachedBytes());
-                else diff.origin = "";
+                diff.origin = "";
+                if (!changedFile.get("parent_commit_hash").equals("")) {
+                    var originLoader = getGitBlobLoader(repo, (String) changedFile.get("parent_commit_hash"), "/" + diff.file_path);
+                    if (originLoader != null)
+                        diff.origin = new String(originLoader.getCachedBytes());
+                }
                 gitCommit.diffList.add(diff);
             }
             return gitCommit;
