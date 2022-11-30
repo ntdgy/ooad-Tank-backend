@@ -8,6 +8,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.diff.DiffEntry;
+import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.dircache.DirCache;
 import org.eclipse.jgit.dircache.DirCacheEditor;
 import org.eclipse.jgit.dircache.DirCacheEntry;
@@ -20,6 +22,7 @@ import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.transport.URIish;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.eclipse.jgit.treewalk.TreeWalk;
+import org.eclipse.jgit.util.io.NullOutputStream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -30,6 +33,7 @@ import tank.ooad.fitgub.exception.CustomException;
 import tank.ooad.fitgub.utils.ReturnCode;
 import tank.ooad.fitgub.utils.Utils;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -40,7 +44,7 @@ import java.util.function.BiConsumer;
 @Component
 @Slf4j
 public class GitOperation {
-    
+
     @Autowired
     private JdbcTemplate template;
 
@@ -86,8 +90,11 @@ public class GitOperation {
         return gitCommit;
     }
 
-    public record MergeBranch(int ownerId, int repoId, String branchName){}
-    public record MergeRequest(MergeBranch from, MergeBranch to){}
+    public record MergeBranch(int ownerId, int repoId, String branchName) {
+    }
+
+    public record MergeRequest(MergeBranch from, MergeBranch to) {
+    }
 
     private final HashMap<MergeRequest, GitMergeStatus> mergeStatusCache = new HashMap<>();
 
@@ -120,6 +127,7 @@ public class GitOperation {
         File repoPath = new File(REPO_STORE_PATH, String.format("%s/%s", repo.owner.id, repo.id));
         return new FileRepository(repoPath);
     }
+
     private Repository getRepository(int ownerId, int repoId) throws IOException {
         File repoPath = new File(REPO_STORE_PATH, String.format("%s/%s", ownerId, repoId));
         return new FileRepository(repoPath);
@@ -389,7 +397,7 @@ public class GitOperation {
     public GitMergeStatus getMergeStatus(MergeRequest mergeRequest, Issue pull) {
         if (mergeStatusCache.containsKey(mergeRequest)) {
             GitMergeStatus cached = mergeStatusCache.get(mergeRequest);
-            try (var source = getRepository(mergeRequest.from.ownerId, mergeRequest.from.repoId);var target = getRepository(mergeRequest.to.ownerId, mergeRequest.to.repoId)) {
+            try (var source = getRepository(mergeRequest.from.ownerId, mergeRequest.from.repoId); var target = getRepository(mergeRequest.to.ownerId, mergeRequest.to.repoId)) {
                 var sourceBranch = source.resolve(mergeRequest.from.branchName);
                 var targetBranch = target.resolve(mergeRequest.to.branchName);
                 if (sourceBranch != null && sourceBranch.toObjectId().toString().equals(cached.from_branch_commit)
@@ -412,7 +420,7 @@ public class GitOperation {
             break;
         }
         try {
-            try (var source = getRepository(mergeRequest.from.ownerId, mergeRequest.from.repoId);var target = getRepository(mergeRequest.to.ownerId, mergeRequest.to.repoId)) {
+            try (var source = getRepository(mergeRequest.from.ownerId, mergeRequest.from.repoId); var target = getRepository(mergeRequest.to.ownerId, mergeRequest.to.repoId)) {
                 var fromCommit = source.resolve(ret.from_branch);
                 if (fromCommit == null) {
                     ret.status = GitMergeStatus.Status.BRANCH_DELETED;
@@ -428,7 +436,7 @@ public class GitOperation {
                 ret.to_branch_commit = toCommit.toString();
             }
             log.info("check merge status at " + tempFolder);
-            Git copiedRepo =  Git.init().setBare(false).setDirectory(tempFolder).call();
+            Git copiedRepo = Git.init().setBare(false).setDirectory(tempFolder).call();
 
             var fromRepoPath = new File(REPO_STORE_PATH, String.format("%s/%s", mergeRequest.from.ownerId, mergeRequest.from.repoId));
             var toRepoPath = new File(REPO_STORE_PATH, String.format("%s/%s", mergeRequest.to.ownerId, mergeRequest.to.repoId));
@@ -653,6 +661,7 @@ public class GitOperation {
     private boolean indexExists(Repo repo, String commitHash) {
         return template.queryForObject("select count(*)>0 from commit_index where repo_id = ? and commit_hash = ?;", Boolean.class, repo.id, commitHash);
     }
+
     private boolean treeBlobIndexExists(Repo repo, String treeOrBlobHash) {
         return template.queryForObject("select count(*)>0 from commit_index where repo_id = ? and blob_or_tree_hash = ?;", Boolean.class, repo.id, treeOrBlobHash);
     }
@@ -686,23 +695,46 @@ public class GitOperation {
             // Fill Diffs
             if (containsDiff) {
                 gitCommit.diffList = new ArrayList<>();
-                var changedFiles = template.queryForList("select * from commit_index where commit_hash = ? and file_path NOT LIKE '%/'", gitCommit.commit_hash);
-                for (Map<String, Object> changedFile : changedFiles) {
+                DiffFormatter df = new DiffFormatter(NullOutputStream.INSTANCE);
+                df.setRepository(repository);
+                var changes = df.scan(commit.getParents()[0], commit);
+                for (DiffEntry change : changes) {
                     GitCommit.Diff diff = new GitCommit.Diff();
-                    diff.file_path = (String) changedFile.get("file_path");
-                    var currentLoader = getGitBlobLoader(repo, gitCommit.commit_hash, "/" + diff.file_path);
-                    if (!(Utils.isBinaryFile(diff.file_path) || currentLoader.getSize() > 1024 * 1024L)) {
-                        diff.current = new String(currentLoader.getCachedBytes());
-                        diff.is_text = true;
-                    } else diff.is_text = false;
-                    diff.origin = "";
-                    if (!changedFile.get("parent_commit_hash").equals("")) {
-                        var originLoader = getGitBlobLoader(repo, (String) changedFile.get("parent_commit_hash"), "/" + diff.file_path);
-                        if (originLoader != null)
-                            diff.origin = new String(originLoader.getCachedBytes());
-                    }
+                    diff.file_path = change.getNewPath().equals("/dev/null") ? change.getOldPath() : change.getNewPath();
+                    var reader = repository.getObjectDatabase().newReader();
+                    if (change.getNewId() != null && !change.getNewId().toObjectId().equals(ObjectId.zeroId())) {
+                        var loader = reader.open(change.getNewId().toObjectId());
+                        if (!(Utils.isBinaryFile(diff.file_path) || loader.getSize() > 1024 * 1024L)) {
+                            diff.current = new String(loader.getCachedBytes());
+                            diff.is_text = true;
+                        } else diff.is_text = false;
+                    } else diff.current = "";
+                    if (change.getOldId() != null && !change.getOldId().toObjectId().equals(ObjectId.zeroId())) {
+                        var loader = reader.open(change.getOldId().toObjectId());
+                        if (!(Utils.isBinaryFile(diff.file_path) || loader.getSize() > 1024 * 1024L)) {
+                            diff.origin = new String(loader.getCachedBytes());
+                            if (!diff.is_text) diff.is_text = true;
+                        }
+                    } else diff.origin = "";
                     gitCommit.diffList.add(diff);
                 }
+//                var changedFiles = template.queryForList("select * from commit_index where commit_hash = ? and file_path NOT LIKE '%/'", gitCommit.commit_hash);
+//                for (Map<String, Object> changedFile : changedFiles) {
+//                    GitCommit.Diff diff = new GitCommit.Diff();
+//                    diff.file_path = (String) changedFile.get("file_path");
+//                    var currentLoader = getGitBlobLoader(repo, gitCommit.commit_hash, "/" + diff.file_path);
+//                    if (!(Utils.isBinaryFile(diff.file_path) || currentLoader.getSize() > 1024 * 1024L)) {
+//                        diff.current = new String(currentLoader.getCachedBytes());
+//                        diff.is_text = true;
+//                    } else diff.is_text = false;
+//                    diff.origin = "";
+//                    if (!changedFile.get("parent_commit_hash").equals("")) {
+//                        var originLoader = getGitBlobLoader(repo, (String) changedFile.get("parent_commit_hash"), "/" + diff.file_path);
+//                        if (originLoader != null)
+//                            diff.origin = new String(originLoader.getCachedBytes());
+//                    }
+//                    gitCommit.diffList.add(diff);
+//                }
             }
             return gitCommit;
         }
