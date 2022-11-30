@@ -93,7 +93,7 @@ public class GitController {
         if (!repoService.checkRepoReadPermission(repo, currentUserId)) {
             return new Return<>(ReturnCode.GIT_REPO_NO_PERMISSION);
         }
-        GitCommit commit = gitOperation.getCommitFromIndex(repo, hash, true);
+        GitCommit commit = gitOperation.getCommit(repo, hash, true);
         return new Return<>(OK, commit);
     }
 
@@ -139,21 +139,6 @@ public class GitController {
             log.error(e.getMessage());
             throw new RuntimeException(e);
 //            return new Return<>(ReturnCode.GitAPIError);
-        }
-    }
-    @GetMapping("/api/git/{ownerName}/{repoName}/head/{ref}")
-    public Return<GitCommit> getHead(@PathVariable String ownerName,
-                                              @PathVariable String repoName,
-                                              @PathVariable String ref,
-                                              HttpSession session) {
-        int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
-        Repo repo = repoService.getRepo(ownerName, repoName);
-        if (!repoService.checkRepoReadPermission(repo, currentUserId)) return new Return<>(GIT_REPO_NO_PERMISSION);
-        try {
-            return new Return<>(OK, gitOperation.getHeadCommit(repo, ref));
-        } catch (Exception e) {
-            log.error(e.getMessage());
-            throw new RuntimeException(e);
         }
     }
 
@@ -250,13 +235,5 @@ public class GitController {
             log.error(e.getMessage());
             throw new RuntimeException(e);
         }
-    }
-    @PostMapping("/api/git/{ownerName}/{repoName}/build_index")
-    public Return<Void> buildIndex(@PathVariable String ownerName,
-                                        @PathVariable String repoName,
-                                        HttpSession session) {
-        Repo repository = repoService.getRepo(ownerName, repoName);
-        gitOperation.buildRepoIndex(repository);
-        return Return.OK;
     }
 }
