@@ -69,6 +69,22 @@ public class GitOperation {
         return gitCommits;
     }
 
+    @SneakyThrows
+    public GitCommit getHeadCommit(Repo repo, String ref) {
+        Repository repository = getRepository(repo);
+        var head = repository.resolve(ref);
+        RevCommit commit = repository.parseCommit(repository.resolve("refs/heads/" + ref));
+        GitCommit gitCommit = new GitCommit();
+        gitCommit.commit_hash = commit.getName();
+        gitCommit.commit_message = commit.getFullMessage();
+        gitCommit.commit_time = commit.getCommitTime();
+        var author = commit.getAuthorIdent();
+        gitCommit.author = new GitPerson(author.getName(), author.getEmailAddress());
+        var committer = commit.getCommitterIdent();
+        gitCommit.committer = new GitPerson(committer.getName(), committer.getEmailAddress());
+        return gitCommit;
+    }
+
     public record MergeBranch(int ownerId, int repoId, String branchName){}
     public record MergeRequest(MergeBranch from, MergeBranch to){}
 

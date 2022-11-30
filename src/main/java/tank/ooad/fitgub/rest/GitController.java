@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import static tank.ooad.fitgub.utils.ReturnCode.OK;
+import static tank.ooad.fitgub.utils.ReturnCode.*;
 
 @Component
 @RestController
@@ -139,6 +139,21 @@ public class GitController {
             log.error(e.getMessage());
             throw new RuntimeException(e);
 //            return new Return<>(ReturnCode.GitAPIError);
+        }
+    }
+    @GetMapping("/api/git/{ownerName}/{repoName}/head/{ref}")
+    public Return<GitCommit> getHead(@PathVariable String ownerName,
+                                              @PathVariable String repoName,
+                                              @PathVariable String ref,
+                                              HttpSession session) {
+        int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
+        Repo repo = repoService.getRepo(ownerName, repoName);
+        if (!repoService.checkRepoReadPermission(repo, currentUserId)) return new Return<>(GIT_REPO_NO_PERMISSION);
+        try {
+            return new Return<>(OK, gitOperation.getHeadCommit(repo, ref));
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            throw new RuntimeException(e);
         }
     }
 
