@@ -7,7 +7,7 @@ import json
 with open('User.json', 'r') as f:
     user = json.load(f)
 
-tokens = ['c6d0c20b-15b4-46f9-b7ef-b1ea54097b95']
+tokens = ['*']
 repo_base_address = '/home/ooad/repo-store'
 server_base_address = '/home/ooad/pages'
 

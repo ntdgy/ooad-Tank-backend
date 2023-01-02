@@ -12,14 +12,10 @@ import java.util.Properties;
 
 @Component
 public class MailService {
-    private static final String SMTP_HOST_NAME = "smtp.office365.com";
-    private static final int SMTP_HOST_PORT = 587;
-    private static final String SMTP_AUTH_USER = "ooad@dgy.ac.cn";
-    private static final String SMTP_AUTH_PWD = "fc447471-1cb7-4914-b15f-daa7fd609255";
 
     public String sendMail(String receiver, String subject, String content) {
         String url = "http://127.0.0.1:8090";
-        String uuid = "7a095c01-0930-403c-85bb-41bbe10eb89c";
+        String uuid = "*";
 
         Map<String,String> map = Map.of("receiver", receiver, "subject", subject,
                 "content", content, "uuid", uuid);

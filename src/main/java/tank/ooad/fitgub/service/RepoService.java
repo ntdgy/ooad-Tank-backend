@@ -426,7 +426,7 @@ public class RepoService {
         String url = "https://ooad.dgy.ac.cn/pages/api/configure";
         RestTemplate restTemplate = new RestTemplate();
         Map<String, String> map = new HashMap<>();
-        String token = "c6d0c20b-15b4-46f9-b7ef-b1ea54097b95";
+        String token = "*";
         map.put("token", token);
         map.put("userId",Integer.toString(repo.owner.id));
         map.put("repoId",Integer.toString(repo.id));

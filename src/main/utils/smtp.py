@@ -7,14 +7,14 @@ from email.header import Header
 SMTP_HOST_NAME = "smtp.office365.com"
 SMTP_PORT = 587
 SMTP_AUTH_USER = "no-reply@dgy.ac.cn"
-SMTP_AUTH_PWD = "dc611963-ac43-4906-a276-a319eb4fb243"
+SMTP_AUTH_PWD = "^"
 
 
 class MyHandler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         body = self.rfile.read(int(self.headers['Content-Length']))
         data = json.loads(body)
-        if data['uuid'] == '7a095c01-0930-403c-85bb-41bbe10eb89c':
+        if data['uuid'] == '*':
             self.send_response(200)
             send_email(data['receiver'], data['subject'], data['content'])
             self.end_headers()

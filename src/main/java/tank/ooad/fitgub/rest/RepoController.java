@@ -221,7 +221,7 @@ public class RepoController {
 
     @RequireLogin
     @PostMapping("/api/repo/{ownerName}/{repoName}/pages")
-    public Return<Boolean> setPagesUp(@PathVariable String ownerName, @PathVariable String repoName, @RequestParam boolean status, HttpSession session) {
+    public Return<Boolean> setPageStatus(@PathVariable String ownerName, @PathVariable String repoName, @RequestParam boolean status, HttpSession session) {
         int currentUserId = (int) AttributeKeys.USER_ID.getValue(session);
         Repo repo = repoService.getRepo(ownerName, repoName);
         if (!repoService.checkRepoWritePermission(repo, currentUserId)) {
